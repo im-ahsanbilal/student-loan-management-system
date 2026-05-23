@@ -1,4 +1,22 @@
-﻿# Web-Based Student Loan Management System
+## 🔐 Demo Login Credentials
+
+Use these accounts to test the system:
+
+| Role    | Email                          | Password     |
+|---------|-------------------------------|--------------|
+| Admin   | admin@university.edu          | Admin@123    |
+| HOD     | hod.information.technology@studentloan.local | HOD@123 |
+| Finance | finance@university.edu        | Finance@123  |
+| Student | Register a new account on the site |         |
+
+## 🌐 Live Demo
+https://imahsanbilal.pythonanywhere.com
+
+## 💻 GitHub Code
+https://github.com/im-ahsanbilal/student-loan-management-system
+ 
+ 
+ # Web-Based Student Loan Management System
 
 A complete Final Year Project built with Flask, MySQL, Bootstrap 5, Flask-Login, Flask-WTF, Flask-Mail, and ReportLab.
 
