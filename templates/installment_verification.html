@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block title %}Verify Installment Receipt | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">Verify Installment Receipt</h1>
+        <p>Finance review of the submitted receipt. Verify the payment or reject it with remarks for the student.</p>
+    </div>
+    <a href="{{ url_for('view_application', application_id=installment.application_id) }}" class="btn btn-outline-primary">Back to Application</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card border-0 animate-in animate-delay-1">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Installment Details</h2>
+                <div class="detail-grid">
+                    <div class="detail-item"><span>Loan ID</span><strong>{{ installment.application.loan_id }}</strong></div>
+                    <div class="detail-item"><span>Student</span><strong>{{ installment.application.student_name }}</strong></div>
+                    <div class="detail-item"><span>Amount</span><strong>PKR {{ '%.2f'|format(installment.amount) }}</strong></div>
+                    <div class="detail-item"><span>Due Date</span><strong>{{ installment.due_date.strftime('%d %b %Y') }}</strong></div>
+                    <div class="detail-item"><span>Status</span><strong>{{ installment_status_label(installment) }}</strong></div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap mt-4">
+                    <a href="{{ url_for('installments.installment_receipt', installment_id=installment.id) }}" class="btn btn-outline-primary" target="_blank" rel="noopener">Preview Receipt</a>
+                    <a href="{{ url_for('installments.installment_receipt', installment_id=installment.id, download=1) }}" class="btn btn-outline-secondary">Download Receipt</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card border-0 animate-in animate-delay-2">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Verification Decision</h2>
+                <form method="post" class="stack-list">
+                    {{ form.hidden_tag() }}
+                    <div class="highlight-panel">
+                        <div class="tiny-label mb-2">Finance Action</div>
+                        <strong>Choose one clear decision for this payment proof.</strong>
+                        <p class="mb-0 mt-2">Rejected receipts are cleared so the student can upload a corrected payment proof.</p>
+                    </div>
+                    <div>
+                        {{ form.remarks.label(class='form-label') }}
+                        {{ form.remarks(class='form-control', rows='5', placeholder='Optional for approval, required when rejecting.') }}
+                        {% for error in form.remarks.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    {% for error in form.decision.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                    <div class="verification-actions">
+                        <button type="submit" name="decision" value="approve" class="btn btn-primary">Verify Payment</button>
+                        <button type="submit" name="decision" value="reject" class="btn btn-outline-danger">Reject Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

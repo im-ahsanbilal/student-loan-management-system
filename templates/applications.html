@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_title }} | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">{{ page_title }}</h1>
+        <p>
+            {% if role_view == 'student' %}
+                Monitor every submitted case, including rejection comments, disbursement planning, and repayment deadlines.
+            {% elif role_view == 'admin' %}
+                Review applications at every stage, inspect workflow readiness, and finalize decisions only after both prior verifications.
+            {% else %}
+                Search, review, and download applications flowing through the verification process.
+            {% endif %}
+        </p>
+    </div>
+    {% if role_view == 'student' %}
+        {% if not application_block_reason %}
+            <a href="{{ url_for('apply_loan') }}" class="btn btn-primary">New Application</a>
+        {% endif %}
+    {% endif %}
+</div>
+
+{% if role_view == 'student' and application_block_reason %}
+    <div class="warning-panel glass-panel p-3 mb-4 animate-in animate-delay-1">
+        <div class="tiny-label mb-2">Application Block</div>
+        <strong>{{ application_block_reason }}</strong>
+    </div>
+{% endif %}
+
+{% if role_view == 'admin' %}
+    <div class="card border-0 mb-4 animate-in animate-delay-1">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-2"><input type="text" class="form-control" name="loan_id" placeholder="Loan ID" value="{{ request.args.get('loan_id', '') }}"></div>
+                <div class="col-md-2"><input type="text" class="form-control" name="student_name" placeholder="Student Name" value="{{ request.args.get('student_name', '') }}"></div>
+                <div class="col-md-2"><input type="text" class="form-control" name="roll_number" placeholder="Roll Number" value="{{ request.args.get('roll_number', '') }}"></div>
+                <div class="col-md-2"><input type="text" class="form-control" name="cnic" placeholder="CNIC" value="{{ request.args.get('cnic', '') }}"></div>
+                <div class="col-md-2">
+                    <select class="form-select" name="department">
+                        <option value="">All Departments</option>
+                        {% for option in department_options %}
+                            <option value="{{ option }}" {% if selected_department == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <select class="form-select" name="status">
+                        <option value="">All</option>
+                        {% for option in status_options %}
+                            <option value="{{ option }}" {% if request.args.get('status') == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1 d-grid"><button class="btn btn-primary">Search</button></div>
+            </form>
+        </div>
+    </div>
+{% elif role_view in ['hod', 'finance'] %}
+    <div class="card border-0 mb-4 animate-in animate-delay-1">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <select class="form-select" name="status">
+                        <option value="">All Statuses</option>
+                        {% for option in status_options %}
+                            <option value="{{ option }}" {% if selected_status == option %}selected{% endif %}>{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Filter</button></div>
+            </form>
+        </div>
+    </div>
+{% endif %}
+
+<div class="card border-0 animate-in animate-delay-2">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 js-sortable">
+            <thead class="table-light">
+                <tr>
+                    <th>Loan / Student</th>
+                    <th>Academic Profile</th>
+                    <th>Amounts</th>
+                    <th>Workflow</th>
+                    <th>Tracking</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for application in applications %}
+                    <tr>
+                        {% set can_submit_after_correction = application_requires_correction(application) and application.has_all_required_documents(required_documents) and not application.has_outstanding_corrections() %}
+                        {% set can_resubmit = application.status in ['Rejected', 'Pending'] and application.has_all_required_documents(required_documents) and not application.has_outstanding_corrections() %}
+                        <td>
+                            <strong>{{ application.loan_id }}</strong>
+                            <div class="text-muted small mt-1">{{ application.student_name }}</div>
+                            <div class="text-muted small">{{ application.roll_number }}</div>
+                            <div class="text-muted small">{{ application.phone_number or '-' }}</div>
+                        </td>
+                        <td>
+                            <div>{{ application.department }}</div>
+                            <div class="text-muted small">{{ application.program_level or 'BS' }} &middot; Semester {{ application.semester }}</div>
+                        </td>
+                        <td>
+                            <div><strong>Requested:</strong> PKR {{ application.loan_amount_requested }}</div>
+                            <div class="small text-muted mt-1">Family income: PKR {{ application.family_income }}</div>
+                            {% if application.status == 'Approved' %}
+                                <div class="small text-muted mt-1">Issued: PKR {{ application.loan_amount_issued or '-' }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-pill {{ application_status_badge(application) }}">
+                                {{ application.status }}
+                            </span>
+                            <div class="small text-muted mt-2">{{ application.current_stage }}</div>
+                            <div class="small text-muted mt-2">HOD: {{ application.hod_status }} | Finance: {{ application.finance_status }}</div>
+                            {% if application.ai_score is not none %}
+                                <div class="small text-muted mt-2">AI: {{ application.ai_score }}/100 | {{ application.ai_recommendation }}</div>
+                            {% endif %}
+                            {% if application.status == 'Rejected' %}
+                                <div class="small text-danger mt-2">{{ application.last_rejection_reason() }}</div>
+                            {% elif application_requires_correction(application) %}
+                                <div class="small text-danger mt-2">{{ application.correction_summary() or 'Corrections requested by admin.' }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if application.status == 'Approved' %}
+                                <div class="small"><strong>Disbursement:</strong> {{ application.expected_disbursement_date.strftime('%d %b %Y') if application.expected_disbursement_date else '-' }}</div>
+                                <div class="small text-muted mt-1"><strong>Status:</strong> {{ application.disbursement_status }}</div>
+                                <div class="small text-muted mt-1"><strong>Repayment:</strong> {{ application.repayment_deadline.strftime('%d %b %Y') if application.repayment_deadline else '-' }}</div>
+                            {% else %}
+                                {% set timeline = build_tracking_timeline(application) %}
+                                <div class="small">{{ timeline[-1].title if timeline else application.current_stage }}</div>
+                                <div class="small text-muted mt-1">{{ timeline[-1].detail if timeline else 'Timeline unavailable' }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('view_application', application_id=application.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                {% if role_view == 'student' %}
+                                    <a href="{{ url_for('upload_documents', application_id=application.id) }}" class="btn btn-sm btn-outline-secondary">Documents</a>
+                                    {% if application.status in ['Rejected', 'Pending', 'Correction Required'] %}
+                                        <a href="{{ url_for('edit_application', application_id=application.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                                        {% if can_submit_after_correction %}
+                                            <form method="post" action="{{ url_for('resubmit_application', application_id=application.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button class="btn btn-sm btn-primary">Submit After Correction</button>
+                                            </form>
+                                        {% elif can_resubmit %}
+                                            <form method="post" action="{{ url_for('resubmit_application', application_id=application.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button class="btn btn-sm btn-primary">Resubmit</button>
+                                            </form>
+                                        {% endif %}
+                                    {% endif %}
+                                {% elif role_view == 'hod' and application.status == 'HOD Verification' %}
+                                    <a href="{{ url_for('hod_review_application', application_id=application.id) }}" class="btn btn-sm btn-primary">Verify</a>
+                                {% elif role_view == 'finance' and application_in_finance_review(application) %}
+                                    <a href="{{ url_for('finance_review_application', application_id=application.id) }}" class="btn btn-sm btn-primary">Verify</a>
+                                {% elif role_view == 'finance' and application.status == 'Approved' and application.admin_status == 'Approved' %}
+                                    <a href="{{ url_for('finance_track_disbursement', application_id=application.id) }}" class="btn btn-sm btn-primary">Track</a>
+                                {% elif role_view == 'admin' and application.admin_status == 'Pending' and application_ready_for_admin_decision(application) and not application_requires_correction(application) %}
+                                    <a href="{{ url_for('admin_review_application', application_id=application.id) }}" class="btn btn-sm btn-primary">Decision</a>
+                                {% elif role_view == 'admin' and application.status == 'Approved' and application.admin_status == 'Approved' %}
+                                    <a href="{{ url_for('admin_manage_installments', application_id=application.id) }}" class="btn btn-sm btn-primary">Installments</a>
+                                {% endif %}
+                                <a href="{{ url_for('download_application_pdf', application_id=application.id) }}" class="btn btn-sm btn-outline-secondary">PDF</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="empty-state">No applications found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

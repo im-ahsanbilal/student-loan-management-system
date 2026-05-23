@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Student Loan Management System{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% block extra_head %}{% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-role="{{ current_user.role if current_user.is_authenticated else 'guest' }}">
+<div class="page-backdrop"></div>
+<div class="page-noise"></div>
+
+<nav class="navbar navbar-expand-lg site-nav navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('dashboard') }}">
+            <img src="{{ url_for('static', filename='images/student-loan-brand.svg') }}" alt="Student Loan Management System" class="brand-logo">
+            <span class="brand-text">
+                <strong>Student Loan</strong>
+                <small>Management Hub</small>
+            </span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNav">
+            <ul class="navbar-nav me-auto mb-3 mb-lg-0">
+                {% if current_user.is_authenticated and current_user.role == 'student' %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student_dashboard' %}active{% endif %}" href="{{ url_for('student_dashboard') }}">Dashboard</a></li>
+                    {% if not student_is_first_semester %}
+                        <li class="nav-item"><a class="nav-link {% if request.endpoint == 'apply_loan' %}active{% endif %}" href="{{ url_for('apply_loan') }}">Apply</a></li>
+                    {% endif %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'student_applications' %}active{% endif %}" href="{{ url_for('student_applications') }}">Applications</a></li>
+                {% elif current_user.is_authenticated and current_user.role == 'hod' %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'hod_dashboard' %}active{% endif %}" href="{{ url_for('hod_dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'hod_applications' %}active{% endif %}" href="{{ url_for('hod_applications') }}">Applications</a></li>
+                {% elif current_user.is_authenticated and current_user.role == 'finance' %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'finance_dashboard' %}active{% endif %}" href="{{ url_for('finance_dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'finance_applications' %}active{% endif %}" href="{{ url_for('finance_applications') }}">Applications</a></li>
+                {% elif current_user.is_authenticated and current_user.role == 'admin' %}
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'admin_dashboard' %}active{% endif %}" href="{{ url_for('admin_dashboard') }}">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'admin_applications' %}active{% endif %}" href="{{ url_for('admin_applications') }}">Applications</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint in ['admin_users', 'create_user', 'update_user'] %}active{% endif %}" href="{{ url_for('admin_users') }}">Users</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'reports' %}active{% endif %}" href="{{ url_for('reports') }}">Reports</a></li>
+                    <li class="nav-item"><a class="nav-link {% if request.endpoint == 'admin_logs' %}active{% endif %}" href="{{ url_for('admin_logs') }}">Logs</a></li>
+                {% endif %}
+            </ul>
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('student_notifications') }}">
+                            Notifications
+                            {% if unread_notifications %}
+                                <span class="badge bg-warning text-dark">{{ unread_notifications }}</span>
+                            {% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item nav-user-chip">{{ current_user.full_name }} <span>{{ current_user.role|capitalize }}</span></li>
+                    {% if current_user.role == 'student' %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('student_profile') }}">Profile</a></li>
+                    {% endif %}
+                    <li class="nav-item"><a class="btn btn-surface btn-sm" href="{{ url_for('logout') }}">Logout</a></li>
+                {% else %}
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+                    <li class="nav-item"><a class="btn btn-surface btn-sm" href="{{ url_for('register') }}">Register</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<main class="page-shell py-4 py-lg-5">
+    <div class="container">
+        {% block page_header %}{% endblock %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="stack-list mb-4">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show glass-alert" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<footer class="site-footer">
+    <div class="container d-flex justify-content-between flex-wrap gap-2 align-items-center">
+        <span>Student Loan Management System</span>
+        <span>&copy; {{ current_year }} Digital Verification Workflow</span>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

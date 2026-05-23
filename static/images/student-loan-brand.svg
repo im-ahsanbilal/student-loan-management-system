@@ -1,0 +1,41 @@
+<svg width="640" height="180" viewBox="0 0 640 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="logoTitle logoDesc">
+  <title id="logoTitle">Student Loan Management System logo</title>
+  <desc id="logoDesc">Education-themed logo with a shield, open book, and graduation cap.</desc>
+  <defs>
+    <linearGradient id="shieldGradient" x1="24" y1="20" x2="162" y2="152" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9"/>
+      <stop offset="0.5" stop-color="#0F766E"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="textGradient" x1="214" y1="34" x2="564" y2="132" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D7F7F1"/>
+    </linearGradient>
+    <filter id="softGlow" x="0" y="0" width="640" height="180" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#07111F" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <g filter="url(#softGlow)">
+    <rect x="8" y="8" width="624" height="164" rx="34" fill="#FFFFFF" fill-opacity="0.04"/>
+    <rect x="24" y="24" width="140" height="132" rx="34" fill="url(#shieldGradient)"/>
+    <path d="M94 44L134 60V91C134 117.6 117.2 136.5 94 144C70.8 136.5 54 117.6 54 91V60L94 44Z" fill="#F8FAFC" fill-opacity="0.16"/>
+    <path d="M72 102C79.8 93.5 90.1 88.2 102.5 86.5C108.9 85.6 114.8 86.2 120 87.7V114.6C111.4 121.4 102.4 126.4 94 129.5C85.6 126.4 76.6 121.4 68 114.6V87.7C73.2 86.2 79.1 85.6 85.5 86.5C97.9 88.2 108.2 93.5 116 102L108.1 109.3C103.6 104.7 97.9 101.8 91 100.9C83.8 100 77.2 101.5 72 105.1V102Z" fill="#F8FAFC"/>
+    <path d="M60 77L94 63L128 77L94 90L60 77Z" fill="#F8FAFC"/>
+    <path d="M86 72L123 85.4V89.8L86 76.4V72Z" fill="#CFFAFE"/>
+    <path d="M66 82L94 92L122 82" stroke="#CFFAFE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="126" cy="72" r="5" fill="#F59E0B"/>
+    <path d="M126 77V93" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="126" cy="98" r="7" fill="#FDE68A"/>
+  </g>
+  <g>
+    <text x="196" y="80" fill="url(#textGradient)" font-family="Space Grotesk, Manrope, sans-serif" font-size="42" font-weight="700" letter-spacing="-1.2">
+      Student Loan
+    </text>
+    <text x="196" y="122" fill="#E2E8F0" font-family="Manrope, sans-serif" font-size="30" font-weight="600" letter-spacing="3.6">
+      MANAGEMENT SYSTEM
+    </text>
+    <text x="198" y="148" fill="#F8FAFC" font-family="Manrope, sans-serif" font-size="16" font-weight="500" opacity="0.92">
+      Education-first verification, approval, and disbursement workflow
+    </text>
+  </g>
+</svg>

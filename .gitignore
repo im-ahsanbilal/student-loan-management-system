@@ -1,0 +1,7 @@
+.env
+venv/
+__pycache__/
+blueprints/__pycache__/
+*.pyc
+uploads/profile_photos/
+*.bak

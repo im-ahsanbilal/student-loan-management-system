@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Pay Installment | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">Pay Installment</h1>
+        <p>Upload a receipt for the selected installment. The payment will move to finance verification after submission.</p>
+    </div>
+    <a href="{{ url_for('view_application', application_id=installment.application_id) }}" class="btn btn-outline-primary">Back to Application</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card border-0 animate-in animate-delay-1">
+            <div class="card-body p-4">
+                <div class="detail-grid mb-4">
+                    <div class="detail-item"><span>Loan ID</span><strong>{{ installment.application.loan_id }}</strong></div>
+                    <div class="detail-item"><span>Amount</span><strong>PKR {{ '%.2f'|format(installment.amount) }}</strong></div>
+                    <div class="detail-item"><span>Due Date</span><strong>{{ installment.due_date.strftime('%d %b %Y') }}</strong></div>
+                    <div class="detail-item"><span>Status</span><strong>{{ installment_status_label(installment) }}</strong></div>
+                </div>
+
+                <form method="post" action="{{ url_for('installments.pay_installment', installment_id=installment.id) }}" enctype="multipart/form-data" class="stack-list">
+                    {{ form.hidden_tag() }}
+                    <div class="file-upload-card">
+                        <div class="file-upload-meta">
+                            <strong>{{ form.receipt_file.label.text }}</strong>
+                            <span>Receipt or transfer proof</span>
+                        </div>
+                        {{ form.receipt_file(class='form-control', data_file_upload='true') }}
+                        <span class="file-name" data-file-name>No file selected</span>
+                        {% for error in form.receipt_file.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        <div class="form-text">Allowed file types: PDF, JPG, JPEG, PNG.</div>
+                    </div>
+                    {{ form.submit(class='btn btn-primary') }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

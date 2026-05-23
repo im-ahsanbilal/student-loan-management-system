@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Edit Installments | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">Edit Installment Plan</h1>
+        <p>Regenerate the plan from simple settings or fine-tune individual installment amounts and due dates.</p>
+    </div>
+    <a href="{{ url_for('view_application', application_id=application.id) }}" class="btn btn-outline-primary">Back to Application</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-4">
+        <div class="card border-0 animate-in animate-delay-1">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Regenerate Plan</h2>
+                <form method="post" class="stack-list">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="regenerate">
+                    <div>
+                        <label class="form-label">Duration (Months)</label>
+                        <input type="number" class="form-control" name="duration_months" min="1" max="60" value="{{ plan_duration }}">
+                    </div>
+                    <div>
+                        <label class="form-label">First Installment Due Date</label>
+                        <input type="date" class="form-control" name="first_due_date" value="{{ first_due_date.isoformat() if first_due_date else '' }}">
+                    </div>
+                    <button class="btn btn-primary">Regenerate Installments</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8">
+        <div class="card border-0 animate-in animate-delay-2">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Manual Schedule Editing</h2>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="save">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-3">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Amount</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for installment in application.installments %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td><input type="number" step="0.01" min="0.01" class="form-control" name="amount_{{ installment.id }}" value="{{ '%.2f'|format(installment.amount) }}"></td>
+                                        <td><input type="date" class="form-control" name="due_date_{{ installment.id }}" value="{{ installment.due_date.isoformat() }}"></td>
+                                        <td><span class="status-pill {{ installment_badge_class(installment) }}">{{ installment_status_label(installment) }}</span></td>
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="4" class="empty-state">No installment records found.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-primary">Save Schedule</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

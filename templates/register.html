@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Register | Student Loan System{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-10">
+        <div class="row g-4 align-items-stretch">
+            <div class="col-lg-5">
+                <div class="hero-panel h-100 animate-in">
+                    <div class="auth-brand mb-4">
+                        <img src="{{ url_for('static', filename='images/student-loan-brand.svg') }}" alt="Student Loan Management System" class="auth-brand-logo">
+                    </div>
+                    <div class="tiny-label mb-3 text-white">Student Onboarding</div>
+                    <h1 class="display-6 mb-3">Create your loan portal account.</h1>
+                    <p class="mb-4">Register once with your academic profile, then track the full application workflow from HOD review through repayment planning.</p>
+                    <div class="stack-list">
+                        <div class="highlight-panel bg-transparent border border-light-subtle text-white">
+                            <strong>Strong identity validation</strong>
+                            <p class="mb-0 mt-2">Roll number, CNIC, phone number, passport photo, and email are validated before the account is created.</p>
+                        </div>
+                        <div class="highlight-panel bg-transparent border border-light-subtle text-white">
+                            <strong>Eligibility-aware workflow</strong>
+                            <p class="mb-0 mt-2">BS students can register and apply through Semester {{ max_eligible_semester }}, while Master students can register and apply through Semester 3.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="card border-0 animate-in animate-delay-1">
+                    <div class="card-body p-4 p-lg-5">
+                        <div class="section-heading mb-4">
+                            <div>
+                                <h2 class="h3 mb-1">Student Registration</h2>
+                                <p>Complete your identity and academic details to unlock the portal.</p>
+                            </div>
+                        </div>
+                        <form method="post" enctype="multipart/form-data" data-program-semester-form data-semester-mode="registration">
+                            {{ form.hidden_tag() }}
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    {{ form.full_name.label(class='form-label') }}
+                                    {{ form.full_name(class='form-control', placeholder='Enter your full name') }}
+                                    {% for error in form.full_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.email.label(class='form-label') }}
+                                    {{ form.email(class='form-control', placeholder='student@university.edu') }}
+                                    {% for error in form.email.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.roll_number.label(class='form-label') }}
+                                    {{ form.roll_number(class='form-control', placeholder='abc0000000', pattern='[A-Za-z]{3}\\d{7}', data_roll_format='true') }}
+                                    {% for error in form.roll_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.phone_number.label(class='form-label') }}
+                                    {{ form.phone_number(class='form-control', placeholder='03001234567', pattern='(?:\\+92|0)3\\d{9}', data_phone_format='true') }}
+                                    {% for error in form.phone_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.father_name.label(class='form-label') }}
+                                    {{ form.father_name(class='form-control', placeholder='Enter father name') }}
+                                    {% for error in form.father_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.cnic.label(class='form-label') }}
+                                    {{ form.cnic(class='form-control', placeholder='12345-1234567-1') }}
+                                    {% for error in form.cnic.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.department.label(class='form-label') }}
+                                    {{ form.department(class='form-select') }}
+                                    {% for error in form.department.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-3">
+                                    {{ form.program_level.label(class='form-label') }}
+                                    {{ form.program_level(class='form-select', data_program_field='true') }}
+                                    {% for error in form.program_level.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-3">
+                                    {{ form.semester.label(class='form-label') }}
+                                    {{ form.semester(class='form-select', data_semester_field='true') }}
+                                    {% for error in form.semester.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-12">
+                                    <div class="document-input-card">
+                                        {{ form.profile_photo.label(class='form-label') }}
+                                        {{ form.profile_photo(class='form-control', accept='.jpg,.jpeg,.png', data_max_size='2097152') }}
+                                        <div class="small text-muted mt-2">Mandatory for students. Upload a clear passport-size JPG or PNG image up to 2 MB.</div>
+                                        {% for error in form.profile_photo.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.password.label(class='form-label') }}
+                                    <div class="input-group">
+                                        {{ form.password(class='form-control password-field', placeholder='Choose a strong password', data_password_policy='true') }}
+                                        <button class="btn btn-outline-secondary password-toggle" type="button">Show</button>
+                                    </div>
+                                    <div class="small text-muted mt-2">Use at least 8 characters with uppercase, lowercase, number, and special character.</div>
+                                    {% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.confirm_password.label(class='form-label') }}
+                                    <div class="input-group">
+                                        {{ form.confirm_password(class='form-control password-field', placeholder='Confirm your password', data_password_policy='true') }}
+                                        <button class="btn btn-outline-secondary password-toggle" type="button">Show</button>
+                                    </div>
+                                    {% for error in form.confirm_password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4">
+                                <span class="text-muted small">Your department and program details are used to route future loan applications to the correct HOD.</span>
+                                {{ form.submit(class='btn btn-primary') }}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% block title %}Review Application | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">{{ review_title }}</h1>
+        <p>Review the complete application record, supporting documents, validation checks, and workflow history before saving your decision.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('view_application', application_id=application.id) }}" class="btn btn-outline-primary">Open Full Timeline</a>
+        <a href="{{ url_for('download_application_pdf', application_id=application.id) }}" class="btn btn-outline-secondary">Download PDF</a>
+    </div>
+</div>
+
+<div class="flow-card mb-4 animate-in animate-delay-1">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+        <div>
+            <div class="tiny-label mb-2">Application Status</div>
+            <h2 class="h4 mb-1">{{ application.loan_id }}</h2>
+            <p class="mb-0 text-muted">{{ application.student_name }} &middot; {{ application.department }} &middot; {{ application.program_level or 'BS' }} &middot; Semester {{ application.semester }}</p>
+        </div>
+        <span class="status-pill {{ application_status_badge(application) }}">
+            {{ application.status }}
+        </span>
+    </div>
+    <div class="flow-steps">
+        {% for step in workflow_snapshot(application) %}
+            <div class="flow-step {{ step.state }}">
+                <div class="step-index">{{ loop.index }}</div>
+                <h3>{{ step.label }}</h3>
+                <p>{{ step.detail }}</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-7">
+        <div class="card border-0 mb-4 animate-in animate-delay-2">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+                    {% if application.student and application.student.profile_photo_path %}
+                        <img src="{{ url_for('serve_profile_photo', user_id=application.student.id) }}" alt="{{ application.student_name }}" class="profile-avatar">
+                    {% else %}
+                        <div class="profile-avatar profile-avatar-fallback">{{ application.student_name[:1] }}</div>
+                    {% endif %}
+                    <div>
+                        <div class="tiny-label mb-1">Applicant</div>
+                        <h2 class="h5 mb-0">{{ application.student_name }}</h2>
+                    </div>
+                </div>
+
+                <div class="section-divider mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">Application Summary</h2>
+                        <p class="mb-0 text-muted">Use this snapshot to confirm the student identity, academic profile, and bank details before proceeding.</p>
+                    </div>
+                </div>
+
+                <div class="review-field-list">
+                    {% for item in review_field_rows %}
+                        <div class="review-field-item">
+                            <span>{{ item.label }}</span>
+                            <strong>{{ item.value }}</strong>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 mb-4 animate-in animate-delay-2">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Validation Snapshot</h2>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span>CGPA</span>
+                        <strong>{{ '%.2f'|format(application.cgpa) if application.cgpa is not none else '-' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>HOD CGPA Check</span>
+                        <strong>{{ 'Confirmed' if application.hod_cgpa_verified else 'Pending / Not confirmed' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>HOD Department Check</span>
+                        <strong>{{ 'Confirmed' if application.hod_department_verified else 'Pending / Not confirmed' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Not a Fee Defaulter</span>
+                        <strong>
+                            {% if application.finance_fee_defaulter is none %}Not checked{% elif application.finance_fee_defaulter %}No{% else %}Yes{% endif %}
+                        </strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Not Availing Scholarship</span>
+                        <strong>
+                            {% if application.finance_scholarship_availing is none %}Not checked{% elif application.finance_scholarship_availing %}No{% else %}Yes{% endif %}
+                        </strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Disbursement Status</span>
+                        <strong>{{ application.disbursement_status }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if current_user.role == 'admin' %}
+            <div class="card border-0 mb-4 animate-in animate-delay-2">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                        <div>
+                            <h2 class="h5 mb-1">AI Suggestion</h2>
+                            <p class="text-muted mb-0">Simple rule-based decision support only. Final approval still stays with admin.</p>
+                        </div>
+                        <button
+                            class="btn btn-sm btn-outline-primary"
+                            type="button"
+                            data-ai-evaluate
+                            data-application-id="{{ application.id }}"
+                        >
+                            Refresh Suggestion
+                        </button>
+                    </div>
+                    <div class="detail-grid" data-ai-result>
+                        <div class="detail-item">
+                            <span>AI Score</span>
+                            <strong data-ai-score>{{ ai_snapshot.ai_score if ai_snapshot else (application.ai_score if application.ai_score is not none else '-') }}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>Recommendation</span>
+                            <strong data-ai-recommendation>{{ ai_snapshot.ai_recommendation if ai_snapshot else (application.ai_recommendation or '-') }}</strong>
+                        </div>
+                        <div class="detail-item detail-item--full">
+                            <span>Explanation</span>
+                            <strong data-ai-explanation>{{ ai_snapshot.ai_explanation if ai_snapshot else (application.ai_explanation or 'AI suggestion will appear here.') }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="card border-0 mb-4 animate-in animate-delay-3">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Reviewer Notes</h2>
+                <div class="stack-list">
+                    <div class="detail-item">
+                        <span>HOD Comments</span>
+                        <strong>{{ application.hod_comments or 'No comments yet' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Finance Comments</span>
+                        <strong>{{ application.finance_comments or 'No comments yet' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Admin Comments</span>
+                        <strong>{{ application.admin_comments or 'No comments yet' }}</strong>
+                    </div>
+                    {% if application.status == 'Rejected' %}
+                        <div class="warning-panel detail-item">
+                            <span>Latest Rejection Reason</span>
+                            <strong>{{ application.last_rejection_reason() }}</strong>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">Uploaded Documents</h2>
+                <span class="small text-muted">Preview and download every file securely.</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Document</th>
+                            <th>Status</th>
+                            <th>Review Notes</th>
+                            <th>File</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for document in application.documents %}
+                            <tr>
+                                <td>{{ document.document_type }}</td>
+                                <td>
+                                    <span class="status-pill {% if document.review_status == 'Rejected' %}danger{% elif document.review_status == 'Pending' %}warning{% else %}success{% endif %}">
+                                        {{ document.review_status }}
+                                    </span>
+                                </td>
+                                <td class="small text-muted">{{ document.review_remarks or 'No issues raised' }}</td>
+                                <td>{{ document.original_filename }}</td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{{ url_for('preview_document', document_id=document.id) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">Preview</a>
+                                        <a href="{{ url_for('download_document', document_id=document.id) }}" class="btn btn-sm btn-outline-secondary">Download</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="5" class="empty-state">No documents uploaded.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-5">
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-body">
+                <h2 class="h5 mb-3">{% if current_user.role in ['hod', 'finance'] %}Verification Form{% else %}Decision Form{% endif %}</h2>
+                <form method="post" {% if form.approved_amount is defined %}data-admin-decision-form{% endif %}>
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.decision.label(class='form-label') }}
+                        {{ form.decision(class='form-select') }}
+                        {% for error in form.decision.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    {% if form.cgpa_verified is defined %}
+                        <div class="validation-checklist mb-3">
+                            <label class="form-check validation-check">
+                                {{ form.cgpa_verified(class='form-check-input') }}
+                                <span class="form-check-label">{{ form.cgpa_verified.label.text }}</span>
+                            </label>
+                            {% for error in form.cgpa_verified.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            <label class="form-check validation-check mt-2">
+                                {{ form.department_verified(class='form-check-input') }}
+                                <span class="form-check-label">{{ form.department_verified.label.text }}</span>
+                            </label>
+                            {% for error in form.department_verified.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if form.not_fee_defaulter is defined %}
+                        <div class="validation-checklist mb-3">
+                            <label class="form-check validation-check">
+                                {{ form.not_fee_defaulter(class='form-check-input') }}
+                                <span class="form-check-label">{{ form.not_fee_defaulter.label.text }}</span>
+                            </label>
+                            {% for error in form.not_fee_defaulter.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            <label class="form-check validation-check mt-2">
+                                {{ form.not_scholarship_availing(class='form-check-input') }}
+                                <span class="form-check-label">{{ form.not_scholarship_availing.label.text }}</span>
+                            </label>
+                            {% for error in form.not_scholarship_availing.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if form.hod_cgpa_verified is defined %}
+                        <div class="validation-checklist mb-3">
+                            <div class="tiny-label mb-2">Admin Editable HOD Checks</div>
+                            <label class="form-check validation-check">
+                                {{ form.hod_cgpa_verified(class='form-check-input') }}
+                                <span class="form-check-label">{{ form.hod_cgpa_verified.label.text }}</span>
+                            </label>
+                            {% for error in form.hod_cgpa_verified.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            <label class="form-check validation-check mt-2">
+                                {{ form.hod_department_verified(class='form-check-input') }}
+                                <span class="form-check-label">{{ form.hod_department_verified.label.text }}</span>
+                            </label>
+                            {% for error in form.hod_department_verified.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if form.approved_amount is defined %}
+                        <div class="mb-3" data-approval-field>
+                            <div class="auto-plan-note">
+                                <strong>University Repayment Banking Details</strong>
+                                <p class="mb-0">Enter all fields below manually. These details are required and are not auto-filled from student data.</p>
+                            </div>
+                        </div>
+                        <div class="mb-3" data-approval-field>
+                            {{ form.approved_amount.label(class='form-label') }}
+                            {{ form.approved_amount(class='form-control', placeholder='Enter final approved amount') }}
+                            {% for error in form.approved_amount.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3" data-approval-field>
+                            {{ form.disbursement_iban.label(class='form-label') }}
+                            {{ form.disbursement_iban(class='form-control', placeholder='PK36SCBL0000001123456702') }}
+                            {% for error in form.disbursement_iban.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3" data-approval-field>
+                            {{ form.university_bank_name.label(class='form-label') }}
+                            {{ form.university_bank_name(class='form-control', placeholder='Enter university bank name') }}
+                            {% for error in form.university_bank_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3" data-approval-field>
+                            {{ form.account_holder_name.label(class='form-label') }}
+                            {{ form.account_holder_name(class='form-control', placeholder='Enter account holder name') }}
+                            {% for error in form.account_holder_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3" data-approval-field>
+                            {{ form.university_account_number.label(class='form-label') }}
+                            {{ form.university_account_number(class='form-control', placeholder='Enter university account number or IBAN') }}
+                            {% for error in form.university_account_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3" data-approval-field>
+                            {{ form.installment_months.label(class='form-label') }}
+                            {{ form.installment_months(class='form-control', placeholder='Enter repayment duration in months') }}
+                            {% for error in form.installment_months.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3" data-approval-field>
+                            {{ form.first_installment_date.label(class='form-label') }}
+                            {{ form.first_installment_date(class='form-control') }}
+                            {% for error in form.first_installment_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3" data-approval-field>
+                            <div class="auto-plan-note">
+                                <strong>Installment planning</strong>
+                                <p class="mb-0">Disbursement date is set automatically to 7 days after approval. You can adjust the repayment duration and first due date here, then fine-tune the schedule after approval if needed.</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        {{ form.remarks.label(class='form-label') }}
+                        {{ form.remarks(class='form-control', rows='5', placeholder='Add verification comments or explain the rejection reason') }}
+                        {% for error in form.remarks.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    {{ form.submit(class='btn btn-primary w-100') }}
+                </form>
+            </div>
+        </div>
+
+        {% if current_user.role == 'admin' and application.admin_status == 'Pending' and application_ready_for_admin_decision(application) %}
+            <div class="card border-0 animate-in animate-delay-3 mt-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                        <div>
+                            <h2 class="h5 mb-1">Request Corrections</h2>
+                            <p class="text-muted mb-0">Select multiple application fields and documents, then send one bundled correction request to the student.</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-select-group="all">Select all</button>
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-select-group="none">Clear</button>
+                        </div>
+                    </div>
+
+                    <form method="post" action="{{ url_for('admin_request_correction', application_id=application.id) }}" class="stack-list" data-correction-checklist>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                        <div>
+                            <div class="tiny-label mb-2">Application Fields</div>
+                            <div class="selection-grid">
+                                {% for item in review_field_rows %}
+                                    <label class="selection-card">
+                                        <input class="form-check-input" type="checkbox" name="field_names" value="{{ item.field_name }}">
+                                        <span class="selection-card__label">{{ item.label }}</span>
+                                        <span class="selection-card__value">{{ item.value }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="tiny-label mb-2">Uploaded Documents</div>
+                            <div class="stack-list">
+                                {% for document in application.documents %}
+                                    <div class="selection-row">
+                                        <label class="form-check selection-row__check">
+                                            <input class="form-check-input" type="checkbox" name="document_ids" value="{{ document.id }}">
+                                            <span class="form-check-label">{{ document.document_type }}</span>
+                                        </label>
+                                        <div class="selection-row__meta">
+                                            <span class="small text-muted">{{ document.original_filename }}</span>
+                                        </div>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <a href="{{ url_for('preview_document', document_id=document.id) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">Preview</a>
+                                            <a href="{{ url_for('download_document', document_id=document.id) }}" class="btn btn-sm btn-outline-secondary">Download</a>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <div class="empty-state">No uploaded documents available for correction.</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Correction Notes</label>
+                            <textarea class="form-control" name="remarks" rows="5" placeholder="Explain what the student needs to correct across the selected items."></textarea>
+                        </div>
+                        <button class="btn btn-outline-primary w-100">Send Bundled Correction Request</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

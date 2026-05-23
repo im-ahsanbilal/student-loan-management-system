@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}Finance Dashboard | Student Loan System{% endblock %}
+{% block content %}
+<div class="hero-panel mb-4 animate-in">
+    <div class="section-heading mb-0">
+        <div>
+            <div class="tiny-label mb-2 text-white">Finance Verification</div>
+            <h1 class="display-6 mb-2">Verify applications and repayment receipts from one finance desk.</h1>
+            <p class="mb-0">Finance records eligibility checks, disbursement tracking, and installment payment verification. Final loan approval still belongs to admin.</p>
+        </div>
+        <a href="{{ url_for('finance_applications') }}" class="btn btn-surface">Open Finance Queue</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card border-0 animate-in animate-delay-1">
+            <div class="card-body">
+                <span class="stat-kicker">Applications To Verify</span>
+                <h2>{{ stats.pending_verification }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-0 animate-in animate-delay-2">
+            <div class="card-body">
+                <span class="stat-kicker">Verified</span>
+                <h2>{{ stats.verified_by_finance }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-0 animate-in animate-delay-2">
+            <div class="card-body">
+                <span class="stat-kicker">Not Verified</span>
+                <h2>{{ stats.not_verified_by_finance }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-0 animate-in animate-delay-2">
+            <div class="card-body">
+                <span class="stat-kicker">Payment Requests</span>
+                <h2>{{ stats.pending_installments }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 animate-in animate-delay-3 mb-4">
+    <div class="card-header">
+        <h2 class="h5 mb-1">Verification Queue</h2>
+        <p class="text-muted mb-0">Review only the applications waiting on finance, including corrected cases returned to finance.</p>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 js-sortable">
+            <thead class="table-light">
+                <tr>
+                    <th>Loan ID</th>
+                    <th>Student</th>
+                    <th>AI Score</th>
+                    <th>Verification Status</th>
+                    <th>Alerts</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for application in applications %}
+                    <tr>
+                        <td>{{ application.loan_id }}</td>
+                        <td>
+                            <strong>{{ application.student_name }}</strong>
+                            <div class="small text-muted mt-1">{{ application.department }}</div>
+                        </td>
+                        <td>
+                            <strong>{{ application.ai_score if application.ai_score is not none else 'Pending' }}</strong>
+                            <div class="small text-muted mt-1">{{ application.ai_recommendation or 'Awaiting AI suggestion' }}</div>
+                        </td>
+                        <td>
+                            <span class="status-pill {{ application_status_badge(application) }}">{{ application.status }}</span>
+                            <div class="small text-muted mt-2">Finance: {{ application.finance_status }}</div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2 flex-wrap">
+                                {% if application.finance_fee_defaulter is none %}
+                                    <span class="status-pill secondary">Fee Not Reviewed</span>
+                                {% elif application.finance_fee_defaulter %}
+                                    <span class="status-pill danger">Fee Defaulter</span>
+                                {% else %}
+                                    <span class="status-pill success">Fee Clear</span>
+                                {% endif %}
+
+                                {% if application.finance_scholarship_availing is none %}
+                                    <span class="status-pill secondary">Scholarship Not Reviewed</span>
+                                {% elif application.finance_scholarship_availing %}
+                                    <span class="status-pill danger">Scholarship Active</span>
+                                {% else %}
+                                    <span class="status-pill success">No Scholarship</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('view_application', application_id=application.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                                {% if application_in_finance_review(application) %}
+                                    <a href="{{ url_for('finance_review_application', application_id=application.id) }}" class="btn btn-sm btn-primary">Verify</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="empty-state">No applications are waiting for finance verification right now.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card border-0 animate-in animate-delay-3">
+    <div class="card-header">
+        <h2 class="h5 mb-1">Installment Payment Verification</h2>
+        <p class="text-muted mb-0">Student receipts waiting for finance approval or rejection.</p>
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 js-sortable">
+            <thead class="table-light">
+                <tr>
+                    <th>Loan / Student</th>
+                    <th>Amount</th>
+                    <th>Due Date</th>
+                    <th>Submitted</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for installment in pending_installments %}
+                    <tr>
+                        <td>
+                            <strong>{{ installment.application.loan_id }}</strong>
+                            <div class="small text-muted mt-1">{{ installment.application.student_name }}</div>
+                        </td>
+                        <td>PKR {{ '%.2f'|format(installment.amount) }}</td>
+                        <td>{{ installment.due_date.strftime('%d %b %Y') }}</td>
+                        <td>{{ installment.paid_date.strftime('%d %b %Y %I:%M %p') if installment.paid_date else '-' }}</td>
+                        <td><span class="status-pill {{ installment_badge_class(installment) }}">{{ installment_status_label(installment) }}</span></td>
+                        <td>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('installments.installment_receipt', installment_id=installment.id) }}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Receipt</a>
+                                <a href="{{ url_for('installments.verify_installment', installment_id=installment.id) }}" class="btn btn-sm btn-primary">Verify / Reject</a>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6" class="empty-state">No installment receipts are waiting for finance verification.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

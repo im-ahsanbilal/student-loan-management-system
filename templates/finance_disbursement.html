@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Finance Disbursement Tracking | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">Finance Disbursement Tracking</h1>
+        <p>Update the disbursement progress for {{ application.loan_id }} and notify the student about every finance milestone.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('view_application', application_id=application.id) }}" class="btn btn-outline-primary">Open Application</a>
+        <a href="{{ url_for('finance_applications') }}" class="btn btn-outline-secondary">Back to Finance Queue</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card border-0 animate-in animate-delay-1">
+            <div class="card-body">
+                <div class="tiny-label mb-2">Approved Student</div>
+                <h2 class="h4 mb-1">{{ application.student_name }}</h2>
+                <p class="text-muted mb-4">{{ application.department }} &middot; {{ application.program_level or 'BS' }} &middot; Semester {{ application.semester }}</p>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span>Approved Amount</span>
+                        <strong>PKR {{ application.loan_amount_issued or '-' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Disbursement IBAN</span>
+                        <strong>{{ application.disbursement_iban or application.student_iban or '-' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Expected Date</span>
+                        <strong>{{ application.expected_disbursement_date.strftime('%d %b %Y') if application.expected_disbursement_date else '-' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Current Status</span>
+                        <strong>{{ application.disbursement_status }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Sent At</span>
+                        <strong>{{ application.disbursement_sent_at.strftime('%d %b %Y %I:%M %p') if application.disbursement_sent_at else '-' }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Received At</span>
+                        <strong>{{ application.disbursement_received_at.strftime('%d %b %Y %I:%M %p') if application.disbursement_received_at else '-' }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 animate-in animate-delay-2">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Update Disbursement</h2>
+                <form method="post">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.disbursement_status.label(class='form-label') }}
+                        {{ form.disbursement_status(class='form-select') }}
+                        {% for error in form.disbursement_status.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.remarks.label(class='form-label') }}
+                        {{ form.remarks(class='form-control', rows='5', placeholder='Optional note for the student or finance audit trail') }}
+                        {% for error in form.remarks.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    {{ form.submit(class='btn btn-primary w-100') }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

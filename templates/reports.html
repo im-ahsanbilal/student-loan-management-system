@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% block title %}Reports | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">Admin Reporting Center</h1>
+        <p>Filter live applications, inspect analytics, and export a polished report pack in PDF, Excel, Word, CSV, or chart format.</p>
+    </div>
+</div>
+
+<div class="card border-0 mb-4 animate-in animate-delay-1">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    {% for option in status_options %}
+                        <option value="{{ option }}" {% if status_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Department</label>
+                <select class="form-select" name="department">
+                    <option value="">All Departments</option>
+                    {% for option in department_options %}
+                        <option value="{{ option }}" {% if department_filter == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-grid"><button class="btn btn-outline-primary">Apply Filters</button></div>
+            <div class="col-md-2 d-grid"><a href="{{ url_for('reports') }}" class="btn btn-outline-secondary">Reset</a></div>
+        </form>
+
+        <div class="d-flex gap-2 flex-wrap mt-4">
+            {% for export_format, label, button_class in [('pdf', 'Download PDF', 'btn btn-primary'), ('excel', 'Download Excel', 'btn btn-outline-primary'), ('word', 'Download Word', 'btn btn-outline-primary'), ('csv', 'Download CSV', 'btn btn-outline-secondary'), ('chart', 'Download Chart', 'btn btn-outline-secondary')] %}
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="status" value="{{ status_filter }}">
+                    <input type="hidden" name="department" value="{{ department_filter }}">
+                    <input type="hidden" name="format" value="{{ export_format }}">
+                    <button class="{{ button_class }}">{{ label }}</button>
+                </form>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card border-0 animate-in animate-delay-1">
+            <div class="card-body">
+                <span class="stat-kicker">Total Applications</span>
+                <h2>{{ summary.total_applications }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-0 animate-in animate-delay-1">
+            <div class="card-body">
+                <span class="stat-kicker">Approved</span>
+                <h2>{{ summary.approved_loans }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-0 animate-in animate-delay-2">
+            <div class="card-body">
+                <span class="stat-kicker">Rejected</span>
+                <h2>{{ summary.rejected_loans }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card border-0 animate-in animate-delay-2">
+            <div class="card-body">
+                <span class="stat-kicker">In Workflow</span>
+                <h2>{{ summary.pending_applications }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card border-0 animate-in animate-delay-2">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Application Status Breakdown</h2>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Department-wise Distribution</h2>
+            </div>
+            <div class="card-body">
+                <canvas id="departmentChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card border-0 animate-in animate-delay-3 mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Department Coverage</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light"><tr><th>Department</th><th>Category</th><th>Assigned HOD</th></tr></thead>
+                    <tbody>
+                        {% for department in coverage_rows %}
+                            <tr><td>{{ department.name }}</td><td>{{ department.category }}</td><td>{{ department.hod.full_name if department.hod else 'Unassigned' }}</td></tr>
+                        {% else %}
+                            <tr><td colspan="3" class="empty-state">No department data found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Department Table</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light"><tr><th>Department</th><th>Total</th></tr></thead>
+                    <tbody>
+                        {% for department, total in department_rows %}
+                            <tr><td>{{ department }}</td><td>{{ total }}</td></tr>
+                        {% else %}
+                            <tr><td colspan="2" class="empty-state">No data found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card border-0 animate-in animate-delay-3 mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Recent Generated Reports</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light"><tr><th>Type</th><th>Format</th><th>File Name</th><th>Generated</th></tr></thead>
+                    <tbody>
+                        {% for report in recent_reports %}
+                            <tr>
+                                <td>{{ report.report_type }}</td>
+                                <td>{{ report.file_format }}</td>
+                                <td>{{ report.file_name }}</td>
+                                <td>{{ report.generated_at.strftime('%d %b %Y %I:%M %p') }}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="4" class="empty-state">No report history yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Application Snapshot</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light"><tr><th>Loan ID</th><th>Student</th><th>Status</th><th>Program</th></tr></thead>
+                    <tbody>
+                        {% for application in applications[:8] %}
+                            <tr>
+                                <td>{{ application.loan_id }}</td>
+                                <td>{{ application.student_name }}</td>
+                                <td>{{ application.status }}</td>
+                                <td>{{ application.program_level or 'BS' }}</td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="4" class="empty-state">No application data yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+    const chartPayload = {{ chart_payload|tojson }};
+
+    const statusContext = document.getElementById("statusChart");
+    if (statusContext) {
+        new Chart(statusContext, {
+            type: "doughnut",
+            data: {
+                labels: chartPayload.status_labels,
+                datasets: [{
+                    data: chartPayload.status_values,
+                    backgroundColor: ["#0f766e", "#1d4ed8", "#f59e0b", "#9333ea", "#16a34a", "#dc2626"],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        position: "bottom"
+                    }
+                }
+            }
+        });
+    }
+
+    const departmentContext = document.getElementById("departmentChart");
+    if (departmentContext) {
+        new Chart(departmentContext, {
+            type: "bar",
+            data: {
+                labels: chartPayload.department_labels,
+                datasets: [{
+                    label: "Applications",
+                    data: chartPayload.department_values,
+                    backgroundColor: "#2563eb",
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

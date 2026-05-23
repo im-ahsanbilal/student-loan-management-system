@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% block title %}Student Dashboard | Student Loan System{% endblock %}
+{% block content %}
+<div class="hero-panel mb-4 animate-in">
+    <div class="section-heading mb-0">
+        <div>
+            <div class="tiny-label mb-2 text-white">Student Workspace</div>
+            <h1 class="display-6 mb-2">Track your application, AI suggestion, and repayment plan in one place.</h1>
+            <p class="mb-0">Keep the dashboard focused on the current status, requested corrections, and the next action you can take.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if is_eligible_for_application %}
+                <a href="{{ url_for('apply_loan') }}" class="btn btn-surface">Apply for Loan</a>
+            {% endif %}
+            <a href="{{ url_for('student_applications') }}" class="btn btn-outline-light">View Applications</a>
+            <a href="{{ url_for('student_profile') }}" class="btn btn-outline-light">Update Profile</a>
+        </div>
+    </div>
+    {% if application_block_reason %}
+        <div class="hero-note warning-panel mt-4">
+            <div class="tiny-label mb-2">Application Block</div>
+            <strong>{{ application_block_reason }}</strong>
+            <p class="mb-0 mt-2">Resolve the current issue first. New BS applications are allowed from Semester 2 to Semester {{ max_eligible_semester }}.</p>
+        </div>
+    {% else %}
+        <div class="hero-note success-note mt-4">
+            <div class="tiny-label mb-2">Eligibility Ready</div>
+            <strong>Your profile is ready for application updates or a new submission.</strong>
+            <p class="mb-0 mt-2">If corrections are requested, edit the form, replace flagged documents, and use the submit button below to re-enter the review workflow.</p>
+        </div>
+    {% endif %}
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card border-0 animate-in animate-delay-1 mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h5 mb-1">Application Status</h2>
+                    <p class="text-muted mb-0">Current status, AI suggestion, and correction actions for your latest applications.</p>
+                </div>
+                <a href="{{ url_for('student_applications') }}" class="btn btn-sm btn-outline-primary">View all</a>
+            </div>
+            <div class="card-body">
+                <div class="stack-list">
+                    {% for application in applications[:3] %}
+                        {% set can_submit_after_correction = application_requires_correction(application) and application.has_all_required_documents(required_documents) and not application.has_outstanding_corrections() %}
+                        {% set can_resubmit = application.status in ['Rejected', 'Pending'] and application.has_all_required_documents(required_documents) and not application.has_outstanding_corrections() %}
+                        <div class="flow-card">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                                <div>
+                                    <div class="tiny-label mb-2">Loan ID {{ application.loan_id }}</div>
+                                    <h3 class="h4 mb-1">{{ application.department }}</h3>
+                                    <p class="mb-0 text-muted">Submitted {{ application.submitted_at.strftime('%d %b %Y') }} | Requested PKR {{ application.loan_amount_requested }}</p>
+                                </div>
+                                <div class="text-end">
+                                    <span class="status-pill {{ application_status_badge(application) }}">{{ application.status }}</span>
+                                    <div class="small text-muted mt-2">{{ application.current_stage }}</div>
+                                </div>
+                            </div>
+
+                            <div class="detail-grid mb-3">
+                                <div class="detail-item">
+                                    <span>Application Status</span>
+                                    <strong>{{ application.current_stage }}</strong>
+                                </div>
+                                <div class="detail-item">
+                                    <span>AI Score</span>
+                                    <strong>{{ application.ai_score if application.ai_score is not none else 'Pending' }}</strong>
+                                </div>
+                                <div class="detail-item">
+                                    <span>AI Recommendation</span>
+                                    <strong>{{ application.ai_recommendation or 'Pending' }}</strong>
+                                </div>
+                                <div class="detail-item">
+                                    <span>AI Explanation</span>
+                                    <strong>{{ application.ai_explanation or 'AI suggestion will appear after evaluation.' }}</strong>
+                                </div>
+                            </div>
+
+                            {% if application.status == 'Approved' and application.admin_status == 'Approved' %}
+                                <div class="detail-grid mb-3">
+                                    <div class="detail-item detail-item--full">
+                                        <span>Repay Loan To:</span>
+                                        <strong>
+                                            Bank Name: {{ application.university_bank_name or '-' }}<br>
+                                            Account Holder Name: {{ application.account_holder_name or '-' }}<br>
+                                            Account Number / IBAN: {{ application.university_account_number or '-' }}
+                                        </strong>
+                                    </div>
+                                </div>
+                            {% endif %}
+
+                            {% if application_requires_correction(application) %}
+                                <div class="warning-panel correction-panel mb-3">
+                                    <div class="tiny-label mb-2">Corrections Requested</div>
+                                    <strong>{{ application.correction_summary() or 'Review the highlighted field and document corrections.' }}</strong>
+                                    <p class="mb-0 mt-2">Update the application, replace any flagged documents, and then use "Submit After Correction".</p>
+                                </div>
+                            {% elif application.status == 'Rejected' %}
+                                <div class="warning-panel correction-panel mb-3">
+                                    <div class="tiny-label mb-2">Rejection Feedback</div>
+                                    <strong>{{ application.last_rejection_reason() }}</strong>
+                                    <p class="mb-0 mt-2">You can still update the details and re-upload documents before resubmitting.</p>
+                                </div>
+                            {% endif %}
+
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="{{ url_for('view_application', application_id=application.id) }}" class="btn btn-outline-primary">View Details</a>
+                                <a href="{{ url_for('upload_documents', application_id=application.id) }}" class="btn btn-outline-secondary">Documents</a>
+                                {% if application.status in ['Rejected', 'Pending', 'Correction Required'] %}
+                                    <a href="{{ url_for('edit_application', application_id=application.id) }}" class="btn btn-primary">Edit Application</a>
+                                {% endif %}
+                                {% if can_submit_after_correction %}
+                                    <form method="post" action="{{ url_for('resubmit_application', application_id=application.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-primary">Submit After Correction</button>
+                                    </form>
+                                {% elif can_resubmit %}
+                                    <form method="post" action="{{ url_for('resubmit_application', application_id=application.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button class="btn btn-primary">Resubmit Application</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <h3 class="h5 mb-2">No applications yet</h3>
+                            <p class="mb-3">Create your first application to start the review workflow.</p>
+                            {% if is_eligible_for_application %}
+                                <a href="{{ url_for('apply_loan') }}" class="btn btn-primary">Start Application</a>
+                            {% else %}
+                                <p class="small text-danger mt-2 mb-0">Students in 1st semester are not eligible to apply for loan.</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-2 mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-1">Installment Summary</h2>
+                <p class="text-muted mb-0">Quick view of repayment progress and outstanding amount.</p>
+            </div>
+            <div class="card-body">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span>Total Installments</span>
+                        <strong>{{ installment_summary.total }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Paid Installments</span>
+                        <strong>{{ installment_summary.paid }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Overdue Installments</span>
+                        <strong class="{% if installment_summary.overdue > 0 %}text-danger{% endif %}">{{ installment_summary.overdue }}</strong>
+                    </div>
+                    <div class="detail-item">
+                        <span>Total Remaining Amount</span>
+                        <strong>PKR {{ '%.2f'|format(installment_summary.remaining_amount) }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-2">
+            <div class="card-header">
+                <h2 class="h5 mb-1">Installment Plan</h2>
+                <p class="text-muted mb-0">Track monthly repayments and upload receipts whenever a due or overdue installment is ready to pay.</p>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Loan ID</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for installment in installments %}
+                            <tr class="{% if installment.status == 'overdue' %}table-danger{% elif installment.status == 'due' %}table-warning{% endif %}">
+                                <td>{{ installment.application.loan_id }}</td>
+                                <td>PKR {{ '%.2f'|format(installment.amount) }}</td>
+                                <td>{{ installment.due_date.strftime('%d %b %Y') }}</td>
+                                <td><span class="status-pill {{ installment_badge_class(installment) }}">{{ installment_status_label(installment) }}</span></td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        {% if installment_can_pay(installment) %}
+                                            <a href="{{ url_for('installments.pay_installment_page', installment_id=installment.id) }}" class="btn btn-sm btn-primary">Pay Now</a>
+                                        {% endif %}
+                                        {% if installment.receipt_file %}
+                                            <a href="{{ url_for('installments.installment_receipt', installment_id=installment.id) }}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">View Receipt</a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="5" class="empty-state">Installments will appear here after a loan is approved.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-3 mt-4">
+            <div class="card-header">
+                <h2 class="h5 mb-1">Payment History</h2>
+                <p class="text-muted mb-0">Recently verified installment payments.</p>
+            </div>
+            <div class="card-body">
+                <div class="stack-list">
+                    {% for paid_installment in payment_history %}
+                        <div class="detail-row">
+                            <span>{{ paid_installment.application.loan_id }} - Due {{ paid_installment.due_date.strftime('%d %b %Y') }}</span>
+                            <strong>PKR {{ '%.2f'|format(paid_installment.amount) }}</strong>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No paid installments yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card border-0 animate-in animate-delay-2 mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-1">AI Help</h2>
+                <p class="text-muted mb-0">Ask about approval chances, application status, corrections, or eligibility.</p>
+            </div>
+            <div class="card-body">
+                <form data-chatbot-form class="stack-list">
+                    <input type="text" name="message" class="form-control" placeholder="Example: What are my chances of approval?">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-chatbot-suggestion="What is my current application status?">Status</button>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-chatbot-suggestion="Do I have any correction requests?">Corrections</button>
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-chatbot-suggestion="Am I eligible to apply for a new loan?">Eligibility</button>
+                    </div>
+                    <button class="btn btn-outline-primary" type="submit">Ask AI</button>
+                </form>
+                <div class="chatbot-reply mt-3" data-chatbot-reply>
+                    Ask about your approval chance, current application status, corrections, or eligibility.
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">Notifications</h2>
+                <a href="{{ url_for('student_notifications') }}" class="small">View all</a>
+            </div>
+            <div class="card-body">
+                {% for notification in notifications %}
+                    <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+                        <h3 class="h6 mb-1">{{ notification.title }}</h3>
+                        <p class="small text-muted mb-1">{{ notification.message }}</p>
+                        <span class="small text-muted">{{ notification.created_at.strftime('%d %b %Y %I:%M %p') }}</span>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No notifications yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Login | Student Loan System{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-xl-9">
+        <div class="row g-4 align-items-stretch">
+            <div class="col-lg-5">
+                <div class="hero-panel h-100 auth-panel animate-in">
+                    <div class="auth-brand mb-4">
+                        <img src="{{ url_for('static', filename='images/student-loan-brand.svg') }}" alt="Student Loan Management System" class="auth-brand-logo">
+                    </div>
+                    <div class="tiny-label mb-3 text-white">Secure Sign In</div>
+                    <h1 class="display-6 mb-3">Continue your student loan workflow.</h1>
+                    <p class="mb-4">Review applications, respond to correction requests, monitor approvals, and track finance updates from one secure portal.</p>
+                    <div class="stack-list">
+                        <div class="highlight-panel bg-transparent border border-light-subtle text-white">
+                            <strong>Clearer verification workflow</strong>
+                            <p class="mb-0 mt-2">Students, HODs, finance officers, and admins now share one consistent review and tracking experience.</p>
+                        </div>
+                        <div class="highlight-panel bg-transparent border border-light-subtle text-white">
+                            <strong>Protected document access</strong>
+                            <p class="mb-0 mt-2">Uploaded records can be previewed and downloaded only by authorized reviewers and the owning student.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7">
+                <div class="card shadow-sm border-0 auth-card animate-in animate-delay-1">
+                    <div class="card-body p-4 p-lg-5">
+                        <h2 class="h3 mb-3">Login</h2>
+                        <p class="text-muted">Use your registered email and password to access the system.</p>
+                        <form method="post">
+                            {{ form.hidden_tag() }}
+                            <div class="mb-3">
+                                {{ form.email.label(class='form-label') }}
+                                {{ form.email(class='form-control', placeholder='name@example.com') }}
+                                {% for error in form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                            </div>
+                            <div class="mb-3">
+                                {{ form.password.label(class='form-label') }}
+                                <div class="input-group">
+                                    {{ form.password(class='form-control password-field', placeholder='Enter password') }}
+                                    <button class="btn btn-outline-secondary password-toggle" type="button">Show</button>
+                                </div>
+                                {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                            </div>
+                            <div class="form-check mb-3">
+                                {{ form.remember(class='form-check-input') }}
+                                {{ form.remember.label(class='form-check-label') }}
+                            </div>
+                            {{ form.submit(class='btn btn-primary w-100') }}
+                        </form>
+                        <div class="d-flex justify-content-between mt-3 small">
+                            <a href="{{ url_for('forgot_password') }}">Forgot password?</a>
+                            <a href="{{ url_for('register') }}">Create student account</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

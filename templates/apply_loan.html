@@ -1,0 +1,269 @@
+{% extends 'base.html' %}
+{% block title %}{{ page_heading }} | Student Loan System{% endblock %}
+{% macro field_errors(field) -%}
+    {% for error in field.errors %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+    {% endfor %}
+{%- endmacro %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">{{ page_heading }}</h1>
+        <p>
+            {% if is_edit_mode %}
+                {% if is_correction_mode %}
+                    Update the requested details, then review any flagged documents before sending the case back into verification.
+                {% else %}
+                    Refresh the rejected application details and continue to the document manager before resubmission.
+                {% endif %}
+            {% else %}
+                Complete each section in order: personal, academic, financial, and required documents.
+            {% endif %}
+        </p>
+    </div>
+    <a href="{{ url_for('student_applications') if is_edit_mode else url_for('student_dashboard') }}" class="btn btn-outline-primary">Back</a>
+</div>
+
+{% if is_correction_mode and correction_reason %}
+    <div class="warning-panel glass-panel p-3 mb-4 animate-in animate-delay-1">
+        <div class="tiny-label mb-2">Requested Corrections</div>
+        <strong>{{ correction_reason }}</strong>
+    </div>
+{% elif rejection_reason %}
+    <div class="warning-panel glass-panel p-3 mb-4 animate-in animate-delay-1">
+        <div class="tiny-label mb-2">Latest Rejection Reason</div>
+        <strong>{{ rejection_reason }}</strong>
+    </div>
+{% endif %}
+
+{% if eligibility_blocked %}
+    <div class="warning-panel glass-panel p-3 mb-4 animate-in animate-delay-1">
+        <div class="tiny-label mb-2">Eligibility Rule</div>
+        <strong>Students in 1st semester are not eligible to apply. BS applications are accepted from Semester 2 through Semester {{ max_eligible_semester }}.</strong>
+        <p class="mb-0 mt-2">Your current academic profile is {{ current_user.program_level or 'not set' }} / Semester {{ current_user.semester or 'not set' }}.</p>
+    </div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" class="application-workflow" data-program-semester-form data-loan-form data-semester-mode="{% if is_edit_mode %}registration{% else %}application{% endif %}">
+    {{ form.hidden_tag() }}
+    <aside class="loan-progress-card animate-in animate-delay-1">
+        <div class="tiny-label mb-2">Application Sections</div>
+        <ol class="progress-rail">
+            <li><span>1</span><strong>Personal</strong></li>
+            <li><span>2</span><strong>Academic</strong></li>
+            <li><span>3</span><strong>Financial</strong></li>
+            <li><span>4</span><strong>Documents</strong></li>
+        </ol>
+        <p class="small text-muted mb-0">
+            {% if is_edit_mode %}
+                Save the form first, then continue to the document screen for replacements.
+            {% else %}
+                All mandatory documents are submitted together with the application.
+            {% endif %}
+        </p>
+    </aside>
+
+    <div class="loan-form-stack">
+        <section class="loan-section-card animate-in animate-delay-1">
+            <div class="loan-section-header">
+                <span class="section-marker">1</span>
+                <div>
+                    <h2 class="h5 mb-1">Personal Information</h2>
+                    <p>Identity and contact details used for verification and notifications.</p>
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6 form-field">
+                    {{ form.student_name.label(class='form-label') }}
+                    {{ form.student_name(class='form-control' ~ (' is-invalid' if form.student_name.errors else ''), placeholder='Enter your full name') }}
+                    {{ field_errors(form.student_name) }}
+                </div>
+                <div class="col-md-6 form-field">
+                    {{ form.father_name.label(class='form-label') }}
+                    {{ form.father_name(class='form-control' ~ (' is-invalid' if form.father_name.errors else ''), placeholder='Enter father name') }}
+                    {{ field_errors(form.father_name) }}
+                </div>
+                <div class="col-md-6 form-field">
+                    {{ form.cnic.label(class='form-label') }}
+                    {{ form.cnic(class='form-control' ~ (' is-invalid' if form.cnic.errors else ''), placeholder='12345-1234567-1') }}
+                    {{ field_errors(form.cnic) }}
+                </div>
+                <div class="col-md-6 form-field">
+                    {{ form.phone_number.label(class='form-label') }}
+                    {{ form.phone_number(class='form-control' ~ (' is-invalid' if form.phone_number.errors else ''), placeholder='03001234567', pattern='(?:\\+92|0)3\\d{9}', data_phone_format='true') }}
+                    {{ field_errors(form.phone_number) }}
+                </div>
+            </div>
+        </section>
+
+        <section class="loan-section-card animate-in animate-delay-2">
+            <div class="loan-section-header">
+                <span class="section-marker">2</span>
+                <div>
+                    <h2 class="h5 mb-1">Academic Information</h2>
+                    <p>Academic profile for department routing, eligibility, and HOD review.</p>
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6 form-field">
+                    {{ form.roll_number.label(class='form-label') }}
+                    {{ form.roll_number(class='form-control' ~ (' is-invalid' if form.roll_number.errors else ''), pattern='[A-Za-z]{3}\\d{7}', data_roll_format='true', placeholder='abc0000000') }}
+                    {{ field_errors(form.roll_number) }}
+                </div>
+                <div class="col-md-6 form-field">
+                    {{ form.cgpa.label(class='form-label') }}
+                    {{ form.cgpa(class='form-control' ~ (' is-invalid' if form.cgpa.errors else ''), placeholder='Enter your CGPA', min='0', max='4', step='0.01') }}
+                    <div class="field-help">Minimum eligible CGPA is {{ minimum_cgpa }}.</div>
+                    {{ field_errors(form.cgpa) }}
+                </div>
+                <div class="col-md-5 form-field">
+                    {{ form.department.label(class='form-label') }}
+                    {{ form.department(class='form-select' ~ (' is-invalid' if form.department.errors else '')) }}
+                    <div class="field-help">Used to route the application to the assigned HOD.</div>
+                    {{ field_errors(form.department) }}
+                </div>
+                <div class="col-md-3 form-field">
+                    {{ form.program_level.label(class='form-label') }}
+                    {{ form.program_level(class='form-select' ~ (' is-invalid' if form.program_level.errors else ''), data_program_field='true') }}
+                    {{ field_errors(form.program_level) }}
+                </div>
+                <div class="col-md-4 form-field">
+                    {{ form.semester.label(class='form-label') }}
+                    {{ form.semester(class='form-select' ~ (' is-invalid' if form.semester.errors else ''), data_semester_field='true') }}
+                    <div class="field-help">BS students can apply from Semester 2 through Semester {{ max_eligible_semester }}.</div>
+                    {{ field_errors(form.semester) }}
+                </div>
+            </div>
+        </section>
+
+        <section class="loan-section-card animate-in animate-delay-3">
+            <div class="loan-section-header">
+                <span class="section-marker">3</span>
+                <div>
+                    <h2 class="h5 mb-1">Financial & Banking Details</h2>
+                    <p>Loan amount, family income, and the student bank account for disbursement review.</p>
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-5 form-field">
+                    {{ form.bank_name.label(class='form-label') }}
+                    {{ form.bank_name(class='form-control' ~ (' is-invalid' if form.bank_name.errors else ''), placeholder='Enter bank name') }}
+                    {{ field_errors(form.bank_name) }}
+                </div>
+                <div class="col-md-4 form-field">
+                    {{ form.iban.label(class='form-label') }}
+                    {{ form.iban(class='form-control' ~ (' is-invalid' if form.iban.errors else ''), placeholder='PK36SCBL0000001123456702') }}
+                    <div class="field-help">IBAN is required and should be at least 24 characters.</div>
+                    {{ field_errors(form.iban) }}
+                </div>
+                <div class="col-md-3 form-field">
+                    {{ form.account_holder_relation.label(class='form-label') }}
+                    {{ form.account_holder_relation(class='form-select' ~ (' is-invalid' if form.account_holder_relation.errors else '')) }}
+                    {{ field_errors(form.account_holder_relation) }}
+                </div>
+                <div class="col-md-6 form-field">
+                    {{ form.loan_amount_requested.label(class='form-label') }}
+                    {{ form.loan_amount_requested(class='form-control' ~ (' is-invalid' if form.loan_amount_requested.errors else ''), type='number', max='50000', min='1', step='0.01', placeholder='Enter requested amount in PKR', data_loan_amount='true') }}
+                    <div class="field-help">Maximum loan amount is 50,000.</div>
+                    <div class="invalid-feedback d-none" data-loan-amount-error>Maximum loan amount is 50,000. Please enter a valid amount.</div>
+                    {{ field_errors(form.loan_amount_requested) }}
+                </div>
+                <div class="col-md-6 form-field">
+                    {{ form.family_income.label(class='form-label') }}
+                    {{ form.family_income(class='form-control' ~ (' is-invalid' if form.family_income.errors else ''), placeholder='Enter monthly family income in PKR') }}
+                    {{ field_errors(form.family_income) }}
+                </div>
+                <div class="col-12 form-field">
+                    {{ form.reason_for_loan.label(class='form-label') }}
+                    {{ form.reason_for_loan(class='form-control' ~ (' is-invalid' if form.reason_for_loan.errors else ''), rows='5', placeholder='Describe the financial need, academic context, and urgency of the loan') }}
+                    {{ field_errors(form.reason_for_loan) }}
+                </div>
+            </div>
+        </section>
+
+        <section class="loan-section-card animate-in animate-delay-3">
+            <div class="loan-section-header">
+                <span class="section-marker">4</span>
+                <div>
+                    <h2 class="h5 mb-1">Required Documents</h2>
+                    <p>
+                        {% if is_edit_mode %}
+                            Document replacement is handled on the next screen so existing files remain trackable.
+                        {% else %}
+                            Attach every required identity, academic, and fee document before submission.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {% if not is_edit_mode %}
+                <div class="file-upload-grid">
+                    <div class="file-upload-card">
+                        <div class="file-upload-meta">
+                            <strong>{{ form.cnic_document.label.text }}</strong>
+                            <span>CNIC/B-Form copy</span>
+                        </div>
+                        {{ form.cnic_document(class='form-control' ~ (' is-invalid' if form.cnic_document.errors else ''), data_file_upload='true') }}
+                        <span class="file-name" data-file-name>No file selected</span>
+                        {{ field_errors(form.cnic_document) }}
+                    </div>
+                    <div class="file-upload-card">
+                        <div class="file-upload-meta">
+                            <strong>{{ form.student_card_document.label.text }}</strong>
+                            <span>Student ID card</span>
+                        </div>
+                        {{ form.student_card_document(class='form-control' ~ (' is-invalid' if form.student_card_document.errors else ''), data_file_upload='true') }}
+                        <span class="file-name" data-file-name>No file selected</span>
+                        {{ field_errors(form.student_card_document) }}
+                    </div>
+                    <div class="file-upload-card">
+                        <div class="file-upload-meta">
+                            <strong>{{ form.fee_voucher_document.label.text }}</strong>
+                            <span>Latest fee voucher</span>
+                        </div>
+                        {{ form.fee_voucher_document(class='form-control' ~ (' is-invalid' if form.fee_voucher_document.errors else ''), data_file_upload='true') }}
+                        <span class="file-name" data-file-name>No file selected</span>
+                        {{ field_errors(form.fee_voucher_document) }}
+                    </div>
+                    <div class="file-upload-card">
+                        <div class="file-upload-meta">
+                            <strong>{{ form.father_cnic_document.label.text }}</strong>
+                            <span>Parent/guardian identity document</span>
+                        </div>
+                        {{ form.father_cnic_document(class='form-control' ~ (' is-invalid' if form.father_cnic_document.errors else ''), data_file_upload='true') }}
+                        <span class="file-name" data-file-name>No file selected</span>
+                        {{ field_errors(form.father_cnic_document) }}
+                    </div>
+                    <div class="file-upload-card">
+                        <div class="file-upload-meta">
+                            <strong>{{ form.academic_transcript_document.label.text }}</strong>
+                            <span>Academic transcript or result record</span>
+                        </div>
+                        {{ form.academic_transcript_document(class='form-control' ~ (' is-invalid' if form.academic_transcript_document.errors else ''), data_file_upload='true') }}
+                        <span class="file-name" data-file-name>No file selected</span>
+                        {{ field_errors(form.academic_transcript_document) }}
+                    </div>
+                </div>
+                <p class="field-help mt-3 mb-0">Allowed file types: PDF, JPG, JPEG, PNG.</p>
+            {% else %}
+                <div class="highlight-panel">
+                    <div class="tiny-label mb-2">Document Reminder</div>
+                    <strong>Document replacement stays available after saving.</strong>
+                    <p class="mb-0 mt-2">Use the document manager on the next screen to replace rejected, pending, or outdated files.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <div class="loan-action-bar animate-in animate-delay-3">
+            <span>
+                {% if is_edit_mode %}
+                    Save these details first, then continue to document review and resubmission.
+                {% else %}
+                    The case moves to the assigned HOD once all required fields and documents pass validation.
+                {% endif %}
+            </span>
+            <button type="submit" class="btn btn-primary" {% if eligibility_blocked %}disabled{% endif %}>{{ submit_label }}</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

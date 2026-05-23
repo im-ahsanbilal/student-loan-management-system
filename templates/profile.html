@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}Profile | Student Loan System{% endblock %}
+{% block content %}
+<div class="row g-4 justify-content-center">
+    <div class="col-xl-4">
+        <div class="card border-0 animate-in animate-delay-1 student-profile-card h-100">
+            <div class="card-body p-4">
+                <div class="profile-avatar-wrap mb-3">
+                    {% if user.profile_photo_path %}
+                        <img src="{{ url_for('serve_profile_photo', user_id=user.id) }}" alt="{{ user.full_name }}" class="profile-avatar profile-avatar-lg">
+                    {% else %}
+                        <div class="profile-avatar profile-avatar-lg profile-avatar-fallback">
+                            {{ user.full_name[:1] }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="text-center mb-4">
+                    <div class="tiny-label mb-2">Student Profile</div>
+                    <h1 class="h3 mb-1">{{ user.full_name }}</h1>
+                    <p class="text-muted mb-0">{{ user.department or 'Department not set' }} | {{ user.program_level or 'Program not set' }} | Semester {{ user.semester or 'Not set' }}</p>
+                </div>
+                {% if not user.profile_photo_path %}
+                    <div class="warning-panel p-3 mb-4">
+                        <div class="tiny-label mb-2">Action Required</div>
+                        <strong>Upload your passport-size photo.</strong>
+                        <p class="mb-0 mt-2">Students must have a valid JPG or PNG photo before a new loan application can be submitted.</p>
+                    </div>
+                {% endif %}
+                <form method="post" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.profile_photo.label(class='form-label') }}
+                        {{ form.profile_photo(class='form-control', accept='.jpg,.jpeg,.png', data_max_size='2097152') }}
+                        <div class="small text-muted mt-2">Upload a passport-size JPG or PNG image up to 2 MB.</div>
+                        {% for error in form.profile_photo.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    {{ form.submit(class='btn btn-primary w-100') }}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8">
+        <div class="section-heading animate-in">
+            <div>
+                <h2 class="h2 mb-1">Academic and Identity Details</h2>
+                <p>Your profile data is used to prefill applications, route cases to the correct HOD, and enforce semester-based eligibility rules.</p>
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-2">
+            <div class="card-body p-4 p-lg-5">
+                <div class="detail-grid">
+                    <div class="detail-item"><span>Full Name</span><strong>{{ user.full_name }}</strong></div>
+                    <div class="detail-item"><span>Email</span><strong>{{ user.email }}</strong></div>
+                    <div class="detail-item"><span>Roll Number</span><strong>{{ user.roll_number }}</strong></div>
+                    <div class="detail-item"><span>Father Name</span><strong>{{ user.father_name }}</strong></div>
+                    <div class="detail-item"><span>Phone Number</span><strong>{{ user.phone_number or 'Not set' }}</strong></div>
+                    <div class="detail-item"><span>CNIC</span><strong>{{ user.cnic }}</strong></div>
+                    <div class="detail-item"><span>Department</span><strong>{{ user.department or 'Not set' }}</strong></div>
+                    <div class="detail-item"><span>Program</span><strong>{{ user.program_level or 'Not set' }}</strong></div>
+                    <div class="detail-item"><span>Semester</span><strong>{{ user.semester or 'Not set' }}</strong></div>
+                    <div class="detail-item"><span>Role</span><strong>{{ user.role|capitalize }}</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

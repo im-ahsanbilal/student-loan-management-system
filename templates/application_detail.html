@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% block title %}Application Detail | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">Application Timeline</h1>
+        <p>Review the complete workflow, supporting documents, and loan tracking milestones for {{ application.loan_id }}.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if current_user.role == 'student' %}
+            <a href="{{ url_for('student_applications') }}" class="btn btn-outline-primary">Back to Applications</a>
+        {% elif current_user.role == 'hod' %}
+            <a href="{{ url_for('hod_applications') }}" class="btn btn-outline-primary">Back to Queue</a>
+        {% elif current_user.role == 'finance' %}
+            <a href="{{ url_for('finance_applications') }}" class="btn btn-outline-primary">Back to Queue</a>
+        {% else %}
+            <a href="{{ url_for('admin_applications') }}" class="btn btn-outline-primary">Back to Applications</a>
+        {% endif %}
+        <a href="{{ url_for('download_application_pdf', application_id=application.id) }}" class="btn btn-outline-secondary">Download PDF</a>
+    </div>
+</div>
+
+<div class="flow-card mb-4 animate-in animate-delay-1">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+        <div>
+            <div class="tiny-label mb-2">Application Overview</div>
+            <h2 class="h4 mb-1">{{ application.student_name }}</h2>
+            <p class="mb-0 text-muted">{{ application.department }} &middot; {{ application.program_level or 'BS' }} &middot; Semester {{ application.semester }}</p>
+        </div>
+        <span class="status-pill {{ application_status_badge(application) }}">
+            {{ application.status }}
+        </span>
+    </div>
+    <div class="flow-steps">
+        {% for step in workflow_snapshot(application) %}
+            <div class="flow-step {{ step.state }}">
+                <div class="step-index">{{ loop.index }}</div>
+                <h3>{{ step.label }}</h3>
+                <p>{{ step.detail }}</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <div class="card border-0 animate-in animate-delay-2 mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+                    {% if application.student and application.student.profile_photo_path %}
+                        <img src="{{ url_for('serve_profile_photo', user_id=application.student.id) }}" alt="{{ application.student_name }}" class="profile-avatar">
+                    {% else %}
+                        <div class="profile-avatar profile-avatar-fallback">{{ application.student_name[:1] }}</div>
+                    {% endif %}
+                    <div>
+                        <div class="tiny-label mb-1">Applicant Profile</div>
+                        <h2 class="h5 mb-0">{{ application.student_name }}</h2>
+                    </div>
+                </div>
+                <h2 class="h5 mb-3">Applicant Details</h2>
+                <div class="detail-grid">
+                    <div class="detail-item"><span>Loan ID</span><strong>{{ application.loan_id }}</strong></div>
+                    <div class="detail-item"><span>Roll Number</span><strong>{{ application.roll_number }}</strong></div>
+                    <div class="detail-item"><span>CGPA</span><strong>{{ '%.2f'|format(application.cgpa) if application.cgpa is not none else '-' }}</strong></div>
+                    <div class="detail-item"><span>AI Score</span><strong>{{ application.ai_score if application.ai_score is not none else 'Pending' }}</strong></div>
+                    <div class="detail-item"><span>Phone Number</span><strong>{{ application.phone_number or '-' }}</strong></div>
+                    <div class="detail-item"><span>CNIC</span><strong>{{ application.cnic }}</strong></div>
+                    <div class="detail-item"><span>Requested Amount</span><strong>PKR {{ application.loan_amount_requested }}</strong></div>
+                    <div class="detail-item"><span>Bank Name</span><strong>{{ application.bank_name or '-' }}</strong></div>
+                    <div class="detail-item"><span>IBAN</span><strong>{{ application.iban or application.student_iban or '-' }}</strong></div>
+                    <div class="detail-item"><span>Account Holder Relation</span><strong>{{ application.account_holder_relation or application.relation_to_student or 'Self' }}</strong></div>
+                    <div class="detail-item"><span>Disbursement Date</span><strong>{{ application.expected_disbursement_date.strftime('%d %b %Y') if application.expected_disbursement_date else '-' }}</strong></div>
+                    <div class="detail-item"><span>Repayment Deadline</span><strong>{{ application.repayment_deadline.strftime('%d %b %Y') if application.repayment_deadline else '-' }}</strong></div>
+                    <div class="detail-item"><span>Not a Fee Defaulter</span><strong>{% if application.finance_fee_defaulter is none %}Not checked{% elif application.finance_fee_defaulter %}No{% else %}Yes{% endif %}</strong></div>
+                    <div class="detail-item"><span>Not Availing Scholarship</span><strong>{% if application.finance_scholarship_availing is none %}Not checked{% elif application.finance_scholarship_availing %}No{% else %}Yes{% endif %}</strong></div>
+                </div>
+                <div class="detail-item mt-3">
+                    <span>Reason for Loan</span>
+                    <strong>{{ application.reason_for_loan }}</strong>
+                </div>
+                {% if application.ai_recommendation %}
+                    <div class="highlight-panel mt-3">
+                        <div class="tiny-label mb-2">AI Suggestion</div>
+                        <strong>{{ application.ai_recommendation }}{% if application.ai_score is not none %} ({{ application.ai_score }}/100){% endif %}</strong>
+                        <p class="mb-0 mt-2">{{ application.ai_explanation }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Uploaded Documents</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Document</th>
+                            <th>Status</th>
+                            <th>Review Notes</th>
+                            <th>Uploaded</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for document in application.documents %}
+                            <tr>
+                                <td>{{ document.document_type }}</td>
+                                <td>
+                                    <span class="status-pill {% if document.review_status == 'Rejected' %}danger{% elif document.review_status == 'Pending' %}warning{% else %}success{% endif %}">
+                                        {{ document.review_status }}
+                                    </span>
+                                </td>
+                                <td class="small text-muted">{{ document.review_remarks or 'No issues raised' }}</td>
+                                <td>{{ document.uploaded_at.strftime('%d %b %Y %I:%M %p') }}</td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{{ url_for('preview_document', document_id=document.id) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">Preview</a>
+                                        <a href="{{ url_for('download_document', document_id=document.id) }}" class="btn btn-sm btn-outline-secondary">Download</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="5" class="empty-state">No documents uploaded.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        <div class="card border-0 animate-in animate-delay-2 mb-4">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Tracking Timeline</h2>
+                <div class="timeline-list">
+                    {% for item in build_tracking_timeline(application) %}
+                        <div class="timeline-item {{ item.state }}">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-body">
+                                <div class="d-flex justify-content-between gap-3 flex-wrap">
+                                    <h3 class="h6 mb-1">{{ item.title }}</h3>
+                                    <span class="small text-muted">{{ item.timestamp.strftime('%d %b %Y %I:%M %p') if item.timestamp else 'Pending' }}</span>
+                                </div>
+                                <p class="mb-0 text-muted">{{ item.detail }}</p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% if application.status == 'Approved' or application.installments %}
+            <div class="card border-0 animate-in animate-delay-3 mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">Installment Plan</h2>
+                    <span class="small text-muted">Monthly plan generated from the approved repayment schedule.</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Receipt</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for installment in application.installments %}
+                                <tr>
+                                    <td>PKR {{ '%.2f'|format(installment.amount) }}</td>
+                                    <td>{{ installment.due_date.strftime('%d %b %Y') }}</td>
+                                    <td><span class="status-pill {{ installment_badge_class(installment) }}">{{ installment_status_label(installment) }}</span></td>
+                                    <td>
+                                        {% if installment.receipt_file %}
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <a href="{{ url_for('installments.installment_receipt', installment_id=installment.id) }}" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">View</a>
+                                                <a href="{{ url_for('installments.installment_receipt', installment_id=installment.id, download=1) }}" class="btn btn-sm btn-outline-secondary">Download</a>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted small">No receipt uploaded</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            {% if current_user.role == 'student' and installment_can_pay(installment) %}
+                                                <a href="{{ url_for('installments.pay_installment_page', installment_id=installment.id) }}" class="btn btn-sm btn-primary">Pay Now</a>
+                                            {% endif %}
+                                            {% if current_user.role == 'finance' and installment.status == 'pending_verification' %}
+                                                <a href="{{ url_for('installments.verify_installment', installment_id=installment.id) }}" class="btn btn-sm btn-primary">Verify / Reject</a>
+                                            {% elif current_user.role == 'admin' and installment.status == 'pending_verification' %}
+                                                <span class="text-muted small">Finance verification pending</span>
+                                            {% elif current_user.role == 'admin' and installment.status == 'paid' and installment.verified_at %}
+                                                {% if installment_admin_confirmed(installment) %}
+                                                    <span class="status-pill success">Record Confirmed</span>
+                                                {% else %}
+                                                    <form method="post" action="{{ url_for('installments.confirm_installment_record', installment_id=installment.id) }}">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                        <button class="btn btn-sm btn-primary">Confirm Record</button>
+                                                    </form>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="empty-state">Installments will be generated once the loan is approved.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if application.field_correction_items() or application.flagged_documents() %}
+            <div class="card border-0 animate-in animate-delay-3 mb-4">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Requested Corrections</h2>
+                    <div class="stack-list">
+                        {% for item in application.field_correction_items() %}
+                            <div class="warning-panel p-3">
+                                <div class="tiny-label mb-2">{{ item.label }}</div>
+                                <strong>{{ item.message }}</strong>
+                            </div>
+                        {% endfor %}
+                        {% for document in application.flagged_documents() %}
+                            <div class="warning-panel p-3">
+                                <div class="tiny-label mb-2">{{ document.document_type }}</div>
+                                <strong>{{ document.review_remarks or ('Document marked ' ~ document.review_status) }}</strong>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Available Actions</h2>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if current_user.role == 'student' %}
+                        {% set can_submit_after_correction = application_requires_correction(application) and application.has_all_required_documents(required_documents) and not application.has_outstanding_corrections() %}
+                        {% set can_resubmit = application.status in ['Rejected', 'Pending'] and application.has_all_required_documents(required_documents) and not application.has_outstanding_corrections() %}
+                        <a href="{{ url_for('upload_documents', application_id=application.id) }}" class="btn btn-outline-primary">Documents</a>
+                        {% if application.status in ['Rejected', 'Pending', 'Correction Required'] %}
+                            <a href="{{ url_for('edit_application', application_id=application.id) }}" class="btn btn-primary">Edit Application</a>
+                        {% endif %}
+                        {% if can_submit_after_correction %}
+                            <form method="post" action="{{ url_for('resubmit_application', application_id=application.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-primary">Submit After Correction</button>
+                            </form>
+                        {% elif can_resubmit %}
+                            <form method="post" action="{{ url_for('resubmit_application', application_id=application.id) }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button class="btn btn-primary">Resubmit Application</button>
+                            </form>
+                        {% endif %}
+                    {% elif current_user.role == 'hod' and application.status == 'HOD Verification' %}
+                        <a href="{{ url_for('hod_review_application', application_id=application.id) }}" class="btn btn-primary">Verify as HOD</a>
+                    {% elif current_user.role == 'finance' and application_in_finance_review(application) %}
+                        <a href="{{ url_for('finance_review_application', application_id=application.id) }}" class="btn btn-primary">Verify as Finance</a>
+                    {% elif current_user.role == 'finance' and application.status == 'Approved' and application.admin_status == 'Approved' %}
+                        <a href="{{ url_for('finance_track_disbursement', application_id=application.id) }}" class="btn btn-primary">Track Disbursement</a>
+                    {% elif current_user.role == 'admin' and application.admin_status == 'Pending' and application_ready_for_admin_decision(application) and not application_requires_correction(application) %}
+                        <a href="{{ url_for('admin_review_application', application_id=application.id) }}" class="btn btn-primary">Record Final Decision</a>
+                    {% elif current_user.role == 'admin' and application.status == 'Approved' and application.admin_status == 'Approved' %}
+                        <a href="{{ url_for('admin_manage_installments', application_id=application.id) }}" class="btn btn-primary">Edit Installment Plan</a>
+                    {% endif %}
+                    <a href="{{ url_for('download_application_pdf', application_id=application.id) }}" class="btn btn-outline-secondary">Download PDF</a>
+                </div>
+                {% if current_user.role == 'admin' and not application_ready_for_admin_decision(application) and application.admin_status == 'Pending' %}
+                    <p class="small text-muted mt-3 mb-0">Final decision stays locked until both HOD and finance approvals are marked approved.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

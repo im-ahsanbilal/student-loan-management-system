@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% block title %}Manage Users | Student Loan System{% endblock %}
+{% block content %}
+<div class="section-heading animate-in">
+    <div>
+        <h1 class="h2 mb-1">User Management</h1>
+        <p>Create, update, disable, and delete users. HODs can still be assigned to multiple approved departments from the managed catalog.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-4">
+        <div class="card border-0 animate-in animate-delay-1">
+            <div class="card-body">
+                <h2 class="h5 mb-3">{{ 'Edit User' if editing_user else 'Create User' }}</h2>
+                <form method="post" enctype="multipart/form-data" action="{{ url_for('update_user', user_id=editing_user.id) if editing_user else url_for('create_user') }}" data-role-form data-program-semester-form data-semester-mode="registration">
+                    {{ user_form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ user_form.full_name.label(class='form-label') }}
+                        {{ user_form.full_name(class='form-control', placeholder='Full name') }}
+                        {% for error in user_form.full_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ user_form.email.label(class='form-label') }}
+                        {{ user_form.email(class='form-control', placeholder='Email address') }}
+                        {% for error in user_form.email.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ user_form.password.label(class='form-label') }}
+                        <div class="input-group">
+                            {{ user_form.password(class='form-control password-field', placeholder='Required for new users; optional for edits', data_password_policy='true') }}
+                            <button class="btn btn-outline-secondary password-toggle" type="button" aria-label="Show password">Show</button>
+                        </div>
+                        <div class="small text-muted mt-2">Minimum 8 characters with uppercase, lowercase, number, and special character.</div>
+                        {% for error in user_form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        {{ user_form.role.label(class='form-label') }}
+                        {{ user_form.role(class='form-select') }}
+                        {% for error in user_form.role.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div data-user-group="student">
+                        <div class="mb-3">
+                            {{ user_form.roll_number.label(class='form-label') }}
+                            {{ user_form.roll_number(class='form-control', placeholder='abc0000000', pattern='[A-Za-z]{3}\\d{7}', data_roll_format='true') }}
+                            {% for error in user_form.roll_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            {{ user_form.father_name.label(class='form-label') }}
+                            {{ user_form.father_name(class='form-control', placeholder='Father name') }}
+                            {% for error in user_form.father_name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            {{ user_form.phone_number.label(class='form-label') }}
+                            {{ user_form.phone_number(class='form-control', placeholder='03001234567', pattern='(?:\\+92|0)3\\d{9}', data_phone_format='true') }}
+                            {% for error in user_form.phone_number.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            {{ user_form.cnic.label(class='form-label') }}
+                            {{ user_form.cnic(class='form-control', placeholder='12345-1234567-1') }}
+                            {% for error in user_form.cnic.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            {{ user_form.department.label(class='form-label') }}
+                            {{ user_form.department(class='form-select') }}
+                            {% for error in user_form.department.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                {{ user_form.program_level.label(class='form-label') }}
+                                {{ user_form.program_level(class='form-select', data_program_field='true') }}
+                                {% for error in user_form.program_level.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ user_form.semester.label(class='form-label') }}
+                                {{ user_form.semester(class='form-select', data_semester_field='true') }}
+                                {% for error in user_form.semester.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
+                        {{ user_form.profile_photo.label(class='form-label') }}
+                        {{ user_form.profile_photo(class='form-control', accept='.jpg,.jpeg,.png', data_max_size='2097152') }}
+                        <div class="small text-muted mt-2">Mandatory for students and optional for admin, HOD, and finance accounts. JPG or PNG only, maximum 2 MB.</div>
+                        {% for error in user_form.profile_photo.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    <div class="mb-3" data-user-group="hod">
+                        <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                            {{ user_form.managed_department_ids.label(class='form-label mb-0') }}
+                            <span class="status-pill secondary">{{ department_options|length }} approved</span>
+                        </div>
+                        <div class="hod-assignment-panel">
+                            {% for group in department_groups %}
+                                <div class="hod-assignment-group">
+                                    <div class="tiny-label mb-2">{{ group.category }}</div>
+                                    <div class="hod-assignment-grid">
+                                        {% for department in group.departments %}
+                                            <label class="selection-card department-selection-card {% if department.id in (user_form.managed_department_ids.data or []) %}is-selected{% endif %}">
+                                                <input class="form-check-input" type="checkbox" name="{{ user_form.managed_department_ids.name }}" value="{{ department.id }}" {% if department.id in (user_form.managed_department_ids.data or []) %}checked{% endif %}>
+                                                <span class="selection-card__value">{{ department.name }}</span>
+                                                <span class="selection-card__label">
+                                                    {% if department.hod %}
+                                                        Current HOD: {{ department.hod.full_name }}
+                                                    {% else %}
+                                                        Unassigned
+                                                    {% endif %}
+                                                </span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% for error in user_form.managed_department_ids.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+                        <div class="small text-muted mt-2">Select one or more departments. Selecting a department reassigns ownership to this HOD.</div>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        {{ user_form.is_active_account(class='form-check-input') }}
+                        {{ user_form.is_active_account.label(class='form-check-label') }}
+                    </div>
+                    <div class="form-check mb-4" data-user-group="student">
+                        {{ user_form.otp_verified(class='form-check-input') }}
+                        {{ user_form.otp_verified.label(class='form-check-label') }}
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        {{ user_form.submit(class='btn btn-primary') }}
+                        {% if editing_user %}
+                            <a href="{{ url_for('admin_users') }}" class="btn btn-outline-secondary">Cancel Edit</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-8">
+        <div class="card border-0 animate-in animate-delay-2 mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-5"><input type="text" class="form-control" name="search" placeholder="Search by name, email, roll number, CNIC, phone, or department" value="{{ search }}"></div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="department">
+                            <option value="">All Departments</option>
+                            {% for option in department_options %}
+                                <option value="{{ option }}" {% if selected_department == option %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="role">
+                            <option value="">All Roles</option>
+                            {% for role in ['student', 'hod', 'finance', 'admin'] %}
+                                <option value="{{ role }}" {% if role_filter == role %}selected{% endif %}>{{ role|capitalize }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-grid"><button class="btn btn-primary">Go</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-3 mb-4">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Profile</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                            <tr>
+                                <td>
+                                    <strong>{{ user.full_name }}</strong>
+                                    <div class="small text-muted">{{ user.created_at.strftime('%d %b %Y') }}</div>
+                                    {% if user.is_system_generated %}
+                                        <div class="small text-muted">System-generated default account</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.role|capitalize }}</td>
+                                <td>
+                                    {% if user.role == 'student' %}
+                                        <div class="small text-muted">{{ user.roll_number or '-' }}</div>
+                                        <div class="small text-muted">{{ user.department or '-' }} &middot; {{ user.program_level or 'BS' }} &middot; Semester {{ user.semester or '-' }}</div>
+                                    {% elif user.role == 'hod' %}
+                                        <div class="small text-muted">{{ user.assigned_department_names()|join(', ') if user.assigned_department_names() else 'No departments assigned' }}</div>
+                                    {% else %}
+                                        <div class="small text-muted">System role</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_active_account %}
+                                        <span class="status-pill success">Active</span>
+                                    {% else %}
+                                        <span class="status-pill danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="{{ url_for('admin_users', edit=user.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                        {% if user.id != current_user.id %}
+                                            <form method="post" action="{{ url_for('toggle_user_status', user_id=user.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button class="btn btn-sm btn-outline-secondary">{{ 'Disable' if user.is_active_account else 'Enable' }}</button>
+                                            </form>
+                                            <form method="post" action="{{ url_for('delete_user', user_id=user.id) }}">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button class="btn btn-sm btn-outline-danger">Delete</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="small text-muted">Current account</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="6" class="empty-state">No users found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card border-0 animate-in animate-delay-3">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Approved Department Coverage</h2>
+            </div>
+            <div class="card-body">
+                {% for group in department_groups %}
+                    <div class="mb-4">
+                        <div class="tiny-label mb-2">{{ group.category }}</div>
+                        <div class="department-grid">
+                            {% for department in group.departments %}
+                                <div class="department-tile">
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <strong>{{ department.name }}</strong>
+                                        {% if department.hod and department.hod.is_active_account %}
+                                            <span class="status-pill success">Assigned</span>
+                                        {% else %}
+                                            <span class="status-pill warning">Needs HOD</span>
+                                        {% endif %}
+                                    </div>
+                                    <span>{{ department.hod.full_name if department.hod else 'Unassigned' }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
