@@ -1,4 +1,4 @@
-# Web-Based Student Loan Management System
+﻿# Web-Based Student Loan Management System
 
 A complete Final Year Project built with Flask, MySQL, Bootstrap 5, Flask-Login, Flask-WTF, Flask-Mail, and ReportLab.
 
