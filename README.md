@@ -1,24 +1,45 @@
-## 🔐 Demo Login Credentials
+# Web-Based Student Loan Management System
 
-Use these accounts to test the system:
-
-| Role    | Email                          | Password     |
-|---------|-------------------------------|--------------|
-| Admin   | admin@university.edu          | Admin@123    |
-| HOD     | hod.information.technology@studentloan.local | HOD@123 |
-| Finance | finance@university.edu        | Finance@123  |
-| Student | Register a new account on the site |         |
+A complete Final Year Project built with Flask, MySQL, Bootstrap 5, Flask-Login, Flask-WTF, Flask-Mail, and ReportLab.
 
 ## 🌐 Live Demo
 https://imahsanbilal.pythonanywhere.com
 
 ## 💻 GitHub Code
 https://github.com/im-ahsanbilal/student-loan-management-system
- 
- 
- # Web-Based Student Loan Management System
 
-A complete Final Year Project built with Flask, MySQL, Bootstrap 5, Flask-Login, Flask-WTF, Flask-Mail, and ReportLab.
+## 🔐 Demo Login Credentials
+
+### Admin
+| Role  | Email                | Password  |
+|-------|----------------------|-----------|
+| Admin | admin@university.edu | Admin@123 |
+
+### Finance
+| Role    | Email                  | Password    |
+|---------|------------------------|-------------|
+| Finance | finance@university.edu | Finance@123 |
+
+### HOD Accounts (All Departments)
+| Department              | Email                                       | Password |
+|-------------------------|---------------------------------------------|----------|
+| Information Technology  | hod.information.technology@studentloan.com  | HOD@123  |
+| Computer Science        | hod.computer.science@studentloan.com        | HOD@123  |
+| Zoology                 | hod.zoology@studentloan.com                 | HOD@123  |
+| Botany                  | hod.botany@studentloan.com                  | HOD@123  |
+| Physics                 | hod.physics@studentloan.com                 | HOD@123  |
+| Chemistry               | hod.chemistry@studentloan.com               | HOD@123  |
+| Mathematics             | hod.mathematics@studentloan.com             | HOD@123  |
+| Business Administration | hod.business.administration@studentloan.com | HOD@123  |
+| Economics               | hod.economics@studentloan.com               | HOD@123  |
+| Education               | hod.education@studentloan.com               | HOD@123  |
+| English                 | hod.english@studentloan.com                 | HOD@123  |
+| Urdu                    | hod.urdu@studentloan.com                    | HOD@123  |
+
+### Student
+| Role    | Details                                     |
+|---------|---------------------------------------------|
+| Student | Register a new account directly on the site |
 
 ## Features
 
@@ -170,9 +191,6 @@ Use the generated hash in MySQL:
 ```sql
 INSERT INTO users (full_name, email, password_hash, department, role, otp_verified, is_active_account)
 VALUES ('System Admin', 'admin@university.edu', 'PASTE_HASH_HERE', NULL, 'admin', 1, 1);
-
-INSERT INTO users (full_name, email, password_hash, department, role, otp_verified, is_active_account)
-VALUES ('Computer Science HOD', 'hod.cs@university.edu', 'PASTE_HASH_HERE', 'Computer Science', 'hod', 1, 1);
 
 INSERT INTO users (full_name, email, password_hash, department, role, otp_verified, is_active_account)
 VALUES ('Finance Officer', 'finance@university.edu', 'PASTE_HASH_HERE', NULL, 'finance', 1, 1);
